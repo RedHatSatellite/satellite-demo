@@ -1,7 +1,8 @@
 Satellite 6 Demo using Ansible
 ===========================
 
-Group of ansible roles to install
+Group of ansible roles to install Satellite 6 and multiple systems in order to
+perform a demo.
 
 INFORMATION
 -----------
