@@ -47,7 +47,7 @@ the following actions:
   9. sets up the system with sane values, activiation keys, hostgroups, subnets, attaching subscriptions, and remastering the pxe-less discovery iso for automatic discovery
 
 [Sat6 based on the install]: https://access.redhat.com/documentation/en/red-hat-satellite/6.2/paged/installation-guide/
-[recommendations for mongod]: https://docs.mongodb.com/manual/administration/production-notes/
+[recommendations for mongodb]: https://docs.mongodb.com/manual/administration/production-notes/
 
 There will be more later, but this is as far as I've gotten.
 
