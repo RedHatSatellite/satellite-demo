@@ -22,12 +22,12 @@ RUN	useradd -u 1000 ansible -U \
 	vim \
 	vim-minimal \
 	&& dnf clean all
-USER ansible
 RUN	id \
-	&& pip install -U beautifulsoup4 --user \
-	&& pip install -U dnspython --user \
-	&& pip install -U netaddr --user \
-	&& pip install -U ovirt-engine-sdk-python --user \
-	&& pip install -U pip --user \
-	&& pip install -U requests --user
+	&& pip install -U pip \
+	&& pip install -U beautifulsoup4 \
+	&& pip install -U dnspython \
+	&& pip install -U netaddr \
+	&& pip install -U ovirt-engine-sdk-python \
+	&& pip install -U requests
+USER ansible
 CMD [ "/bin/bash" ]
