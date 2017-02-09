@@ -28,6 +28,7 @@ RUN	id \
 	&& pip install -U dnspython \
 	&& pip install -U netaddr \
 	&& pip install -U ovirt-engine-sdk-python \
+	&& pip install -U pyOpenSSL \
 	&& pip install -U requests
 USER ansible
 CMD [ "/bin/bash" ]
