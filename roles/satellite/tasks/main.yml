@@ -2,6 +2,9 @@
 # vim: sw=2 ts=102 ai
 # tasks file for satellite
 
+# make sure the previous role's handlers were called
+- meta: flush_handlers
+
 # we do this early as some stuff doesn't need to be done if it's already working
 - name: check if satellite is answering
   uri:
