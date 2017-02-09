@@ -7,7 +7,7 @@
   changed_when: "{{ hammer_output.stdout | from_json | length == 0 }}"
 
 - name: Create sync plan for daily syncs
-  command: "/usr/bin/hammer sync-plan create --interval=daily --name='Daily sync' {{ ORG }} --enabled=yes --sync-date={{ lookup('pipe', 'date +%Y-%m-%') }}"
+  command: "/usr/bin/hammer sync-plan create --interval=daily --name='Daily sync' {{ ORG }} --enabled=yes --sync-date={{ lookup('pipe', 'date +%Y-%m-%d') }}"
   when: hammer_output.changed
 
 - name: enable sync plan for product
