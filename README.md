@@ -19,30 +19,31 @@ Overview
 This colletions of roles will create a collection of systems for a Satellite 6
 Demo that exist behind a jump box using internal non-public networks. It does
 the following actions:
+
 1. Creates a bunch of VMs via oVirt (or AWS when working)
-..1. router server VM for proxy
-..2. (proxied) satellite server VM
-..3. (proxied) optional number of satellite capsule VMs
-..4. (proxied) optional number of client VMs
+  1. router server VM for proxy
+  2. (proxied) satellite server VM
+  3. (proxied) optional number of satellite capsule VMs
+  4. (proxied) optional number of client VMs
 2. Adds and configures any extra
-..1. extra network interfaces are added and renamed to sane values
-..2. extra disks are added to new or existing LVMs and existing content is rsync'd (for example for `/var`)
+  1. extra network interfaces are added and renamed to sane values
+  2. extra disks are added to new or existing LVMs and existing content is rsync'd (for example for `/var`)
 3. Properly configures the storage requirements for
-..1. [Sat6 based on the install]
-..2. based on [recommendations for mongodb]
+  1. [Sat6 based on the install]
+  2. based on [recommendations for mongodb]
 4. Configures the router
-..1. haproxy, dnsmasq
-..2. Adds all the hosts in the demo for dns to work behind the proxy.
+  1. haproxy, dnsmasq
+  2. Adds all the hosts in the demo for dns to work behind the proxy.
 5. Configures the satellite server
-..1. installs all the packages and configures the firewall
-..2. runs the satellite installer and starts satellite
-..3. copies or downloads the manifest from the Red Hat Portal
-..4. enables all the demo repos and sets them for `on-download` for deferred downloads
-..5. synchronizes the repos
-..6. defines the demo content-views, adds all their repos, and publishes 1st version
-..7. defines the demo lifecycle environments
-..8. defines filters for one demo view, publishes, promotes them to environments, with one-month increment filters
-..9. sets up the system with sane values, activiation keys, hostgroups, subnets, attaching subscriptions, and remastering the pxe-less discovery iso for automatic discovery
+  1. installs all the packages and configures the firewall
+  2. runs the satellite installer and starts satellite
+  3. copies or downloads the manifest from the Red Hat Portal
+  4. enables all the demo repos and sets them for `on-download` for deferred downloads
+  5. synchronizes the repos
+  6. defines the demo content-views, adds all their repos, and publishes 1st version
+  7. defines the demo lifecycle environments
+  8. defines filters for one demo view, publishes, promotes them to environments, with one-month increment filters
+  9. sets up the system with sane values, activiation keys, hostgroups, subnets, attaching subscriptions, and remastering the pxe-less discovery iso for automatic discovery
 
 [Sat6 based on the install]: https://access.redhat.com/documentation/en/red-hat-satellite/6.2/paged/installation-guide/
 [recommendations for mongod]: https://docs.mongodb.com/manual/administration/production-notes/
@@ -123,6 +124,7 @@ There's a few variables that you will want to customize and their typical locati
 There's a lot to customize, so only the most important are listed.
 
 **Variable file:** `group_vars/all/customize.yml`
+
 This holds all the variables that are global and can be public:
 * `ovirt_url` - the URL for the oVirt/RHV management interface
 * `ovirt_user` - the username for the oVirt/RHV management interface
@@ -157,27 +159,27 @@ This holds all the variables that are global and can be public:
 
 There are some varibles through the group files that are common in their function.
 * `satellite_rhsm_user` - (`satellite` role) used to login into the Red Hat Portal
-..- if this and the password are defined then the role will access the portal, and attempt to find and download the `manifest.zip` that matches the name of the current default Organization for the Satellite.
-..- if they aren't defined, and the `satellite_manifest_file` is, then the role will copy the `manifest.zip` from the local ansible host, and then upload it into the satellite server.
+  - if this and the password are defined then the role will access the portal, and attempt to find and download the `manifest.zip` that matches the name of the current default Organization for the Satellite.
+  - if they aren't defined, and the `satellite_manifest_file` is, then the role will copy the `manifest.zip` from the local ansible host, and then upload it into the satellite server.
 * `subscription_mirror` - (`rhel` role) will create `mirror.repo` in `/etc/yum.repos.d/` from the contents of the dictionary
-..- it will also install plugins from `subscription_plugins` from the repos in `subscription_repos_mirror`
+  - it will also install plugins from `subscription_plugins` from the repos in `subscription_repos_mirror`
 * `satellite_subscription_contract`
-..- if not defined, when we look for a subscription to attach to the activation key sorted by highest Quantity
-..- if defined, then we will select the first subscription with that contract number
+  - if not defined, when we look for a subscription to attach to the activation key sorted by highest Quantity
+  - if defined, then we will select the first subscription with that contract number
 * `authorized_ssh_keys` - (`rhel` role) if blank will pull in ~/id_rsa.pub
-..- otherwise will use the contents of the variable
+  - otherwise will use the contents of the variable
 * `nic` dictionary - (global) is auto populated from inventory vars
-..- useful for playbooks that don't call a `setup` such as the vm creation tasks
-..- or when you don't know the ip address of the host yet
-..- or can not connect to it to obtain it, but still need it for a task
+  - useful for playbooks that don't call a `setup` such as the vm creation tasks
+  - or when you don't know the ip address of the host yet
+  - or can not connect to it to obtain it, but still need it for a task
 * `ansible_ssh_common_args` - (global) defined for the `proxied` hosts in order to use the router as the jump host
 * `vm_extra_disks` - (`vms-ovirt` role and later aws) will automatically add those disks to the VM
-..- `storage_domain` - (above) the pre-existing storage domain for the added disks. (big/cheap/fast)
+  - `storage_domain` - (above) the pre-existing storage domain for the added disks. (big/cheap/fast)
 * `lv` - (`rhel` role) this small variable has big consequences if defined.
-..- it will add the extra disks
-..- add/configure to existing or new VG/LV
-..- rsync any existing files if asked
-..- and defined a read-head value to meet the mongodb requirements and add that rule to udev 
+  - it will add the extra disks
+  - add/configure to existing or new VG/LV
+  - rsync any existing files if asked
+  - and defined a read-head value to meet the mongodb requirements and add that rule to udev 
 
 Dependencies
 ------------
@@ -217,19 +219,19 @@ The above defines a `test-server` in the `test` group with three network interfa
 When expanded out by logic in the playbooks and templates, it will look like this.
 
 - interface 1
-..- `rhevm` oVirt interface (VM)
-..- `eth0` OS interface
-..- `192.168.26.63/24` is host/mask of the interface
+  - `rhevm` oVirt interface (VM)
+  - `eth0` OS interface
+  - `192.168.26.63/24` is host/mask of the interface
 - interface 2
-..- `int0` oVirt interface (VM)
-..- `eth1` OS interface
-..- `192.168.30.2/24` is host/mask of the interface
+  - `int0` oVirt interface (VM)
+  - `eth1` OS interface
+  - `192.168.30.2/24` is host/mask of the interface
 - interface 3
-..- `int1` oVirt interface (VM)
-..- `eth2` OS interface
-..- `192.168.31.2/24` is host/mask of the interface
+  - `int1` oVirt interface (VM)
+  - `eth2` OS interface
+  - `192.168.31.2/24` is host/mask of the interface
 - gateway
-..- assumes 1st interface, 10 ip addresses into the CIDR of the network `192.168.26.0/24`
+  - assumes 1st interface, 10 ip addresses into the CIDR of the network `192.168.26.0/24`
 
 How to run the playbook
 ------------------------
@@ -270,30 +272,30 @@ You can add `--tags=` to the playbook to limit the run to only certain tags.
 The following tags are defined for different roles:
 
 * vms-ovirt: ovirt - on all tasks below
-..- login - only run the login sequence
-..- create - only run the initial VM creation part
-..- disks - only run the extra attachment of disks
-..- tags - only tag the VMs as demo VMs
+  - login - only run the login sequence
+  - create - only run the initial VM creation part
+  - disks - only run the extra attachment of disks
+  - tags - only tag the VMs as demo VMs
 * rhel: configure - on all tasks below
-..- certificates - only get CA certs and add them to the system
-..- subscriptions - only register and attach subscriptions
-..- mirrors - only run the section that adds the repo mirrors
-..- disks - only run the disks plays that adds and rsyncs new disks
+  - certificates - only get CA certs and add them to the system
+  - subscriptions - only register and attach subscriptions
+  - mirrors - only run the section that adds the repo mirrors
+  - disks - only run the disks plays that adds and rsyncs new disks
 * routers: configure - since it depends on the `rhel` role, this also has a configure tag
-..- networks - configures the networks and the extra interfaces for routing/MASQ
-..- docker - for starting the haproxy and rhev agent docker containers
+  - networks - configures the networks and the extra interfaces for routing/MASQ
+  - docker - for starting the haproxy and rhev agent docker containers
 * satellites: satellite - only satellite tasks
-..- satellite-packages - only install the packages to the system
-..- satellite-networks - only configure the firewall and network
-..- satellite-install - run the installer
-..- satellite-hammer - run all the tasks that need hammer
-..- satellite-manifest - only run the manifest tasks
-..- satellite-repos - only run the repository tasks
-..- satellite-sync - only synch the repositories
-..- satellite-view - only create the content-views
-..- satellite-environments - only create the lifecylce environments
-..- satellite-cv-filter - only create/remove the sequence of creating rules for a demo view using 4 months of filters
-..- satellite-provision - only run the provisioning sanity steps
+  - satellite-packages - only install the packages to the system
+  - satellite-networks - only configure the firewall and network
+  - satellite-install - run the installer
+  - satellite-hammer - run all the tasks that need hammer
+  - satellite-manifest - only run the manifest tasks
+  - satellite-repos - only run the repository tasks
+  - satellite-sync - only synch the repositories
+  - satellite-view - only create the content-views
+  - satellite-environments - only create the lifecylce environments
+  - satellite-cv-filter - only create/remove the sequence of creating rules for a demo view using 4 months of filters
+  - satellite-provision - only run the provisioning sanity steps
 
 License
 -------
