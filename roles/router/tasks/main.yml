@@ -1,0 +1,9 @@
+# vim: sw=2 ai ts=102
+---
+- include: copy_skel.yml
+  tags: [configure]
+- include: network.yml
+  tags: [networks,configure]
+- include: docker.yml
+  when: docker_haproxy is not none or docker_ovirt_agent is not none
+  tags: [docker,configure]

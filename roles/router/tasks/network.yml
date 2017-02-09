@@ -1,0 +1,61 @@
+# vim: sw=2 ai ts=102
+---
+- name: try and clean up interfaces
+  shell: >
+    MIN=$(nmcli c | head -n 1 | sed 's/^.*\(UUID .*$\)/\1/' | wc -c);
+    MAX=$(nmcli c | head -n 1 | wc -c);
+    nmcli c | tail -n +2 | cut -b 1-$[ $MAX-$MIN ] | sed -e 's/[[:space:]]*$//' | grep -Ev '^(eth|docker)' | xargs -d '\n' nmcli c delete
+  register: nmcli_result
+  failed_when: >
+    nmcli_result.rc != 0 and ("No connection specified" not in nmcli_result.stderr)
+  changed_when: "nmcli_result.rc == 0"
+
+- name: add our extra interfaces
+  shell: >
+    if nmcli c show {{ item.name }} | grep ipv4.addresses | grep -q {{ item.ip }} ; then
+      exit 0;
+    else
+      nmcli c delete {{ item.name }} || true;
+      nmcli c add type ethernet con-name {{ item.name }} ifname {{ item.name }} autoconnect yes save yes ip4 {{ item.ip }} &&
+      echo "changed" 1>&2
+    fi
+  with_items: "{{ nmcli_extra_ifaces }}"
+  register: nmcli_result
+  changed_when: >
+    nmcli_result.rc == 0 and ("changed" in nmcli_result.stderr)
+
+- name: Configure iptables for routing and masquerading
+  copy:
+    src: iptables
+    dest: /etc/sysconfig/iptables
+  register: iptables
+  notify: restart iptables
+
+- name: configure dnsmasq
+  template:
+    src: dnsmasq.conf.j2
+    dest: /etc/dnsmasq.conf
+    owner: root
+    group: root
+    mode: 0644
+  notify: restart dnsmasq
+  tags: [dnsmasq]
+
+- name: configure hosts file
+  template:
+    src: hosts.j2
+    dest: /etc/hosts
+    owner: root
+    group: root
+    mode: 0644
+  notify: restart dnsmasq
+  tags: [dnsmasq]
+
+- name: start dnsmasq service
+  service:
+    name: dnsmasq
+    state: started
+    enabled: yes
+  tags: [dnsmasq]
+
+- meta: flush_handlers

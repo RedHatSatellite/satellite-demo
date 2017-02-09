@@ -1,0 +1,20 @@
+# vim: sw=2 ai ts=102
+---
+- include: clean.yml
+  when: vms_clean is defined
+  tags: [configure,subscriptions]
+
+- include: certificates.yml
+  tags: [configure,certificates]
+
+- include: subscriptions.yml
+  when: vms_clean is not defined
+  tags: [configure,subscriptions]
+
+- include: mirrors.yml
+  when: "(vms_clean is not defined) and (subscription_mirror) and (ansible_pkg_mgr) and (ansible_pkg_mgr == 'yum' )"
+  tags: [configure,mirrors]
+
+- include: disks.yml
+  when: vms_clean is not defined
+  tags: [configure,disks]

@@ -1,0 +1,16 @@
+# vim: sw=2 ai ts=104
+---
+############
+# Customize these via the all/customize.yml file
+############
+
+ansible_user: root
+
+user_password: "{{ ('redhat123 ' + range(500,1000)|random|string) | hash('sha1') }}"
+hostname: "{{ inventory_hostname }}.{{ domain_name }}"
+
+router_server: "{{ groups['routers'][0] }}"
+router_server_ip: "{{ hostvars[router_server].nic.ip | ipaddr('address')}}"
+
+# default memory for all VMs
+vm_memory: 2GiB

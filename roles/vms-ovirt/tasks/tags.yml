@@ -1,0 +1,8 @@
+# vim: sw=2 ai ts=102
+---
+- name: "Attach tags"
+  ovirt_tag:
+    auth: "{{ ovirt_auth }}"
+    vm_name: "{{ inventory_hostname }}"
+    state: present
+    name: "{{ ovirt_tag }}"

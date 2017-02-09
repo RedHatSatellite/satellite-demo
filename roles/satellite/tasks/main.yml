@@ -1,0 +1,48 @@
+---
+# vim: sw=2 ts=102 ai
+# tasks file for satellite
+
+# we do this early as some stuff doesn't need to be done if it's already working
+- name: check if satellite is answering
+  uri:
+    url: "https://{{ hostname }}/api/organizations"
+    user: "{{ satellite_user }}"
+    password: "{{ satellite_pass }}"
+    force_basic_auth: yes
+  register: satellite_is_installed
+  ignore_errors: yes
+  tags: [ always ]
+- set_fact:
+    satellite_is_installed: "{{ False if satellite_is_installed.failed | default(False) or satellite_is_installed.status != 200 else True }}"
+  tags: [ always ]
+
+- include: install_packages.yml
+  tags: [satellite-packages, satellite]
+  when: not satellite_is_installed
+
+- include: network.yml
+  tags: [satellite-networks, satellite]
+
+- include: satellite_install.yml
+  tags: [satellite-install, satellite]
+
+- include: satellite_manifest.yml
+  tags: [satellite-manifest, satellite-hammer, satellite]
+
+- include: satellite_repos.yml
+  tags: [satellite-repos,ssatellite-hammer, satellite]
+
+- include: satellite_sync.yml
+  tags: [satellite-sync, satellite-hammer, satellite]
+
+- include: satellite_view.yml
+  tags: [satellite-view, satellite-hammer, satellite]
+
+- include: satellite_environments.yml
+  tags: [satellite-environments, satellite-hammer, satellite]
+
+- include: satellite_cv_filter.yml
+  tags: [satellite-cv-filter, satellite-hammer, satellite]
+
+- include: satellite_provision.yml
+  tags: [satellite-provision, satellite-hammer, satellite]

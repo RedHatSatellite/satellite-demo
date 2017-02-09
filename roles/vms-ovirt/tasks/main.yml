@@ -1,0 +1,17 @@
+# vim: sw=2 ai ts=102
+---
+- include: login.yml
+  tags: [ovirt,login,create,disks,tags]
+
+- block:
+  - include: create.yml
+    tags: [ovirt,create]
+  - include: disks.yml
+    tags: [ovirt,disks]
+  - include: tags.yml
+    tags: [ovirt,tags]
+  when: vms_clean is not defined
+
+- block: 
+  - include: clean.yml
+  when: vms_clean is defined

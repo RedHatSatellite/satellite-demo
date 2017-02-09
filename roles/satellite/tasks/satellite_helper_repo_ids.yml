@@ -1,0 +1,43 @@
+---
+# sw=2 ts=102 ai
+
+- name: grab all repos
+  command: "/usr/bin/hammer --output json repository list {{ORG}} --product='{{satellite_hammer_product}}'"
+  register: hammer_output
+  changed_when: False
+  when: repo_ids is not defined
+
+- name: convert result to key pair list
+  set_fact:
+    ti: "{{ [ item.Name, item.Id ] }}"
+  with_items: "{{ hammer_output.stdout | default('[]') | from_json }}"
+  register: tmp
+  loop_control:
+    label: "{{[ item.Name, item.Id ]}}"
+  when: repo_ids is not defined
+
+- name: coerce list into dictionary
+  set_fact:
+    tl: "{{ dict(tmp.results | map(attribute='ansible_facts') | map(attribute='ti') | list) }}"
+  when: repo_ids is not defined
+
+- name: map repo_ids to repo map
+  set_fact:
+    ti: "{{ [ item.key, tl[item.value.1] ] }}"
+  register: tmp
+  with_dict: "{{ SAT_MAP }}"
+  loop_control:
+    label: "{{ item.key }}"
+  when: repo_ids is not defined
+
+- name: coerce result into dictionary
+  set_fact:
+    repo_ids: "{{ dict(tmp.results | map(attribute='ansible_facts') | map(attribute='ti') | list) }}"
+  when: repo_ids is not defined
+
+- name: clean up temporary variables
+  set_fact:
+    ti: null
+    tl: null
+    tmp: null
+  when: ti or tl or tmp

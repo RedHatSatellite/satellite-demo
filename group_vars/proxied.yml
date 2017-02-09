@@ -1,0 +1,15 @@
+# vim: sw=2 ai ts=10240
+---
+############
+# Customize these via the all/customize.yml file
+############
+
+############
+# the dns servers for the proxied hosts are different than the direct ones
+############
+dns_servers: "{{ nic.gw }}"
+
+############
+# This allows us to use the router as a jump box
+############
+ansible_ssh_common_args: "-o ProxyCommand='ssh -W %h:%p -q root@{{ router_server_ip }}'"

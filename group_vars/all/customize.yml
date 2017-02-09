@@ -1,0 +1,126 @@
+# vim: sw=2 ai ts=2 expandtab
+---
+############
+# USER CUSTOMIZABLE HERE
+############
+# These are easily overriden by other groups. However, they override the role
+# defaults. 
+#
+# You MUST Customize some of these
+# XXX: items listed this way, you need to update
+# update the entries in secret.yml.example and then move it to secret.yml
+############
+
+############
+# needed for oVirt
+############
+ovirt_url: "https://rhevm.servdog.gonoph.net/ovirt-engine/api"
+ovirt_user: 'demoadmin@IPA'
+# XXX: you need to define the secret
+# ovirt_pass: SECRET
+
+############
+# cluster and template information 
+############
+vm_cluster: 'AMD-Cheap'
+vm_template: rhel-guest-image-7.3-35.x86_64
+routers_vm_template: rhel-atomic-cloud-7.3.1-1.x86_64.rhevm
+routers_storage_domain: wdc-data-1
+satellites_storage_domain: ssd-data
+capsules_storage_domain: wdc-data-1
+
+############
+# activation keys
+############
+subscription_ak: SATELLITE-DEMO-RHEL-VM
+satellites_subscription_ak: SATELLITE-DEMO-SATELLITE
+# XXX: you need to define the secret
+# subscription_org: SECRET
+
+############
+# uncomment this to automatically add the CA from the server/port list added to
+# new VMs 
+############
+# add_certificates: [ "registry.virt:443" ]
+
+############
+# uncomment this to use your own copy of the haproxy and rhevm guest agent
+# docker images
+############
+# docker_haproxy: registry.virt/haproxy
+# docker_ovirt_agent: registry.virt/rhev4/rhevm-guest-agent:latest
+
+############
+# XXX: you must unblank one of these sections for satellite configuration
+############
+###
+# RHSM login info
+###
+satellite_rhsm_user: ""
+# you must define the SECRET
+# satellite_rhsm_pass: ""
+###
+# Satellite manifest file local location
+###
+satellite_manifest_file: ""
+
+
+
+
+############
+# YOU CAN LEAVE THESE DEFAULTS
+############
+
+############
+# uncomment this to define pulp alternate content sources
+############
+# pulp_mirror: "http://registry.virt/pulp/"
+
+############
+# leave blank and a task will pull it from the current user
+############
+# authorized_ssh_keys: ""
+
+############
+# define in order to use mirrored repositories on your network
+############
+# subscription_mirror:
+#   pulp-rhel-7-server-rpms:
+#     baseurl: http://registry.virt/pulp/content/dist/rhel/server/7/7Server/x86_64/os
+#     sslverify: "0"
+#     enabled: "1"
+#     gpgkey: file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release
+#     gpgcheck: "1"
+
+############
+# define in order to use mirrored repositories on your network
+# a little more repos needed for satellite
+############
+# satellite_subscription_mirror:
+#   pulp-rhel-7-server-rpms:
+#     baseurl: http://registry.virt/pulp/content/dist/rhel/server/7/7Server/x86_64/os
+#     sslverify: "0"
+#     enabled: "1"
+#     gpgkey: file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release
+#     gpgcheck: "1"
+#
+#   pulp-rhel-7-server-rh-common-rpms:
+#     baseurl: http://registry.virt/pulp/content/dist/rhel/server/7/7Server/x86_64/rh-common/os
+#     sslverify: "0"
+#     enabled: "1"
+#     gpgkey: file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release
+#     gpgcheck: "1"
+#
+#   pulp-rhel-7-server-rhscl-rpms:
+#     baseurl: http://registry.virt/pulp/content/dist/rhel/server/7/7Server/x86_64/rhscl/1/os
+#     sslverify: "0"
+#     enabled: "1"
+#     gpgkey: file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release
+#     gpgcheck: "1"
+#
+#   pulp-rhel-7-server-satellite-6.2-rpms:
+#     baseurl: http://registry.virt/pulp/content/dist/rhel/server/7/7Server/x86_64/satellite/6.2/os
+#     sslverify: "0"
+#     enabled: "1"
+#     gpgkey: file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release
+#     gpgcheck: "1"

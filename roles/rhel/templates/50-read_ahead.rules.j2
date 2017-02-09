@@ -1,0 +1,5 @@
+{% for item in lvm_mounts %}
+{% if item.readahead is defined and item.readahead is not none %}
+SUBSYSTEM=="block", ENV{DM_VG_NAME}=="{{item.vg}}", ENV{DM_LV_NAME}=="{{item.lv}}", ACTION=="add|change", ATTR{bdi/read_ahead_kb}="{{item.readahead}}"
+{% endif %}
+{% endfor %}

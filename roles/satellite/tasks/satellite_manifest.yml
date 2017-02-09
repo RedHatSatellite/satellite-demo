@@ -1,0 +1,78 @@
+---
+# vim: sw=4 ts=102 ai
+
+- name: check if manifest is installed
+  command: "/usr/bin/hammer --output json subscription list {{ ORG }}"
+  register: manifest_installed
+  changed_when: "manifest_installed.stdout | from_json | length == 0"
+
+- block:
+
+    - set_fact:
+        satellite_manifest_copy: "{{ True if satellite_manifest_file else False }}"
+        satellite_manifest_download: "{{ True if satellite_rhsm_user and satellite_rhsm_pass else False }}"
+
+    - fail:
+        msg: "You must define either satellite_manifest_file or satellite_rhsm_user and pass"
+      when: not satellite_manifest_copy and not satellite_manifest_download
+
+    - name: copy manifest
+      copy:
+          src: "{{ satellite_manifest_file }}"
+          dest: "{{ satellite_manifest_file_dest }}"
+      when: satellite_manifest_copy
+
+    - block:
+        - name: obtain owner list
+          uri:
+            url: "https://subscription.rhn.redhat.com/subscription/users/{{ satellite_rhsm_user }}/owners"
+            user: "{{ satellite_rhsm_user }}"
+            password: "{{ satellite_rhsm_pass }}"
+            validate_certs: False
+            return_content: yes
+          register: manifest
+
+        - name: obtain satellite consumers
+          uri:
+            url: "https://subscription.rhn.redhat.com/subscription/owners/{{ manifest.json[0].key }}/consumers?type=satellite"
+            user: "{{ satellite_rhsm_user }}"
+            password: "{{ satellite_rhsm_pass }}"
+            validate_certs: False
+            return_content: yes
+          register: manifest
+
+        - name: filter consumer for manifest
+          set_fact:
+            consumer: |
+              {% for x in manifest.json %}
+              {% if x.name == satellite_default_organization %}
+              {{ x }}
+              {% endif %}
+              {% endfor %}
+
+        - name: download manifest
+          uri:
+            url: "https://subscription.rhn.redhat.com/subscription/consumers/{{ consumer.uuid }}/export"
+            user: "{{ satellite_rhsm_user }}"
+            password: "{{ satellite_rhsm_pass }}"
+            validate_certs: False
+            creates: "{{ satellite_manifest_file_dest }}"
+            dest: "{{ satellite_manifest_file_dest }}"
+            return_content: no
+
+      when: not satellite_manifest_copy and satellite_manifest_download
+
+  when: manifest_installed.changed
+
+- name: upload manifest
+  command: "/usr/bin/hammer --output json subscription upload --file {{ satellite_manifest_file_dest }} {{ ORG }}"
+  when: manifest_installed.changed
+
+- name: grab manifest information
+  command: "/usr/bin/hammer --output json subscription list {{ ORG }}"
+  register: hammer_output
+  changed_when: "hammer_output.stdout | from_json | length == 0"
+
+- name: show manifest information
+  debug:
+      msg: "{{ hammer_output.stdout | from_json }}"

@@ -1,0 +1,6 @@
+# vim: sw=2 ai ts=102
+---
+- name: "Copy skel files to make shell prettier"
+  shell: "rsync -av /etc/skel/ $HOME/"
+  args:
+    creates: "$HOME/.bashrc"

@@ -1,0 +1,4 @@
+secret.yml
+*.retry
+*.pyc
+*~

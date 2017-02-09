@@ -1,0 +1,28 @@
+---
+# vim: sw=4 ts=102 ai
+# tasks file for satellite
+- name: ensure packages are updated
+  yum:
+    name: '*'
+    state: latest
+
+- name: remove ntp
+  yum:
+    name: "ntp,ntpdate"
+    state: absent
+
+- name: install chrony
+  yum:
+    name: "chrony"
+    state: present
+
+- name: start chrony
+  systemd:
+    name: chronyd
+    state: started
+    enabled: yes
+
+- name: Install Satellite packages
+  yum:
+    name: "{{ satellite_packages | join(',') }}"
+    state: present

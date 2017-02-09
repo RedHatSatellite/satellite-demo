@@ -1,0 +1,158 @@
+# vim: sw=2 ai ts=102
+---
+- name: Ensure lvm2 is is installed
+  yum:
+    name: lvm2
+    state: present
+
+- name: "Extend or create VG"
+  lvg:
+    pvs: "{{ item.pvs }}"
+    vg: "{{ item.vg }}"
+  with_items: "{{ lvm }}"
+
+- name: "Create LVs"
+  lvol:
+    lv: "{{ item.1.lv }}"
+    vg: "{{ item.0.vg }}"
+    size: "{{ item.1.size }}"
+  with_subelements:
+    - "{{ lvm }}"
+    - lvs
+
+- name: "Create new filesystems"
+  filesystem:
+    fstype: "{{item.1.fs}}"
+    dev: "/dev/{{item.0.vg}}/{{item.1.lv}}"
+  with_subelements:
+    - "{{ lvm }}"
+    - lvs
+
+- name: "check synchronize"
+  command: /usr/bin/true
+  args:
+    creates: "{{item.1.mp}}/.synchronized"
+  when: item.1.rsync
+  with_subelements:
+    - "{{ lvm }}"
+    - lvs
+  register: check_synchronize
+  tags: [mounts]
+
+# trying to clean up the item list, as it's really big at this point
+- name: Clean up mount results
+  set_fact:
+    lvm_mounts: >
+      {{ lvm_mounts|default([]) + [
+        {
+          'changed': item.changed,
+          'lv': item.item.1.lv,
+          'vg': item.item.0.vg,
+          'mp': item.item.1.mp,
+          'fs': item.item.1.fs,
+          'rsync': item.item.1.rsync,
+          'readahead': item.item.1.readahead | default(None)
+        }
+      ] }}
+  no_log: true
+  with_items: "{{ check_synchronize.results }}"
+  tags: [mounts]
+
+- name: "Mounting for sync"
+  mount:
+    name: "/mnt/{{item.lv}}"
+    src: "/dev/{{item.vg}}/{{item.lv}}"
+    fstype: "{{item.fs}}"
+    opts: discard,noatime
+    state: mounted
+  when: item.changed
+  with_items: "{{ lvm_mounts }}"
+  tags: [mounts]
+
+- name: "synchronize mount points"
+  shell: >
+    /usr/bin/cp -uva --sparse=always -t /mnt/{{item.lv}}/ {{item.mp}}/* {{item.mp}}/.[0-9A-Za-z]*
+  args:
+    creates: "/mnt/{{item.lv}}/.synchronized"
+  when: item.changed
+  with_items: "{{ lvm_mounts }}"
+  tags: [mounts]
+
+- name: "mark synchronize"
+  command: /usr/bin/touch "/mnt/{{item.lv}}/.synchronized"
+  args:
+    creates: "/mnt/{{item.lv}}/.synchronized"
+  when: item.changed
+  with_items: "{{ lvm_mounts }}"
+  tags: [mounts]
+
+- name: "Clean up mounts"
+  mount:
+    name: "/mnt/{{item.lv}}"
+    src: "/dev/{{item.vg}}/{{item.lv}}"
+    state: absent
+  when: item.changed
+  with_items: "{{ lvm_mounts }}"
+  tags: [mounts]
+
+- name: "Add mounts for boot"
+  mount:
+    name: "{{item.mp}}"
+    src: "/dev/{{item.vg}}/{{item.lv}}"
+    fstype: "{{item.fs}}"
+    opts: discard,noatime
+    state: present
+  when: item.changed
+  with_items: "{{ lvm_mounts }}"
+  tags: [mounts]
+
+- set_fact:
+    reboot_host: True
+  when: item.changed
+  with_items: "{{ lvm_mounts }}"
+  tags: [mounts]
+
+- name: restart machine
+  shell: sleep 2 && shutdown -r now "Ansible updates triggered"
+  async: 2
+  poll: 0
+  ignore_errors: true
+  when: reboot_host
+  tags: [mounts]
+
+- name: waiting for server to come back
+  wait_for:
+    host: "{{ ansible_host }}"
+    search_regex: OpenSSH
+    delay: 10
+    port: 22
+    timeout: 60
+  delegate_to: "{{ delegate_ip }}"
+  remote_user: root
+  when: reboot_host
+  tags: [mounts]
+
+- name: "Mounting filesystems"
+  mount:
+    name: "{{item.mp}}"
+    src: "/dev/{{item.vg}}/{{item.lv}}"
+    fstype: xfs
+    state: mounted
+    opts: discard,noatime
+  with_items: "{{ lvm_mounts }}"
+  register: mount_results
+  tags: [mounts]
+
+- name: "ensure udev rules are copied"
+  template:
+    src: 50-read_ahead.rules.j2
+    dest: "/etc/udev/rules.d/50-read_ahead.rules"
+  when: "{{ lvm_mounts | selectattr('readahead','defined') | selectattr('readahead') | map(attribute='readahead') | list | length > 0}}"
+  notify: reload udev 
+  tags: [mounts]
+
+- name: "Restore SELinux permissions"
+  command: /usr/sbin/restorecon -Rv "{{item.item.mp}}"
+  with_items: "{{ mount_results.results }}"
+  when: item.changed
+  tags: [mounts]

@@ -1,0 +1,23 @@
+---
+# vim: sw=2 ts=102 ai
+
+- name: Getting environments
+  command: "/usr/bin/hammer --output json lifecycle-environment list {{ORG}}"
+  register: hammer_output
+  changed_when: false
+
+- name: Checking environments
+  set_fact:
+    tmp: dummy
+  register: environment_check
+  changed_when: "{{ item.name not in hammer_output.stdout | from_json | map(attribute='Name') | list }}"
+  with_items: "{{ satellite_hammer_environments }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Creating environments
+  command: "/usr/bin/hammer --output json lifecycle-environment create --name '{{item.item.name}}' --description '{{item.item.description}}' --prior '{{item.item.prior}}' {{ORG}}"
+  when: item.changed
+  with_items: "{{ environment_check.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"

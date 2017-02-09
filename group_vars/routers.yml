@@ -1,0 +1,26 @@
+# vim: sw=2 ai ts=10240
+---
+############
+# Customize these via the all/customize.yml file
+############
+
+############
+# the template for the router should be atomic host
+############
+vm_template: "{{ routers_vm_template }}"
+
+############
+# The memory for the router can be 1 gig, though that's officiall less than the
+# recommended size, it works perfectly
+############
+vm_memory: 1GiB
+
+vm_extra_disks:
+  - name: dockerdisk
+    size: '10GiB'
+    storage_domain: "{{ routers_storage_domain }}"
+
+lvm:
+  - pvs: "/dev/vda2,/dev/vdb"
+    vg: "atomicos"
+    lvs: []

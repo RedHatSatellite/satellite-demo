@@ -1,0 +1,12 @@
+# vim: sw=2 ai ts=102
+---
+- name: restart iptables
+  service:
+    name: iptables
+    state: restarted
+    enabled: True
+- name: restart docker
+  systemd:
+    name: docker
+    state: restarted
+    enabled: True

@@ -1,0 +1,11 @@
+# vim: sw=2 ai ts=102
+---
+- name: restart dnsmasq
+  systemd:
+    name: dnsmasq
+    state: restarted
+    enabled: True
+
+- name: restart iptables
+  listen: "regenerate CA trust"
+  include: "handler_task_docker.yml"

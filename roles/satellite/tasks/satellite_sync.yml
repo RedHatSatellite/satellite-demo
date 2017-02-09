@@ -1,0 +1,30 @@
+---
+# vim: sw=2 ts=102 ai
+
+- name: check if sync plan already created
+  command: "/usr/bin/hammer --output json sync-plan list --name='Daily sync' {{ ORG }}"
+  register: hammer_output
+  changed_when: "{{ hammer_output.stdout | from_json | length == 0 }}"
+
+- name: Create sync plan for daily syncs
+  command: "/usr/bin/hammer sync-plan create --interval=daily --name='Daily sync' {{ ORG }} --enabled=yes --sync-date={{ lookup('pipe', 'date +%Y-%m-%') }}"
+  when: hammer_output.changed
+
+- name: enable sync plan for product
+  command: "/usr/bin/hammer product set-sync-plan --sync-plan='Daily sync' {{ORG}} --name='{{PROD}}'"
+  when: hammer_output.changed
+
+- include: satellite_helper_repo_ids.yml
+
+- name: check repo sync status
+  command: "/usr/bin/hammer --output json repository info {{ORG}} --id={{ item }}"
+  register: hammer_output
+  changed_when: "{{ (hammer_output.stdout | from_json).Sync.Status != 'Success' }}"
+  with_items: "{{ repo_ids.items() | map(attribute=1) | list }}"
+
+- name: synchronize repos that need it
+  command: "/usr/bin/hammer repository synchronize --id={{ item.item }}"
+  when: "{{ item.changed }}"
+  with_items: "{{ hammer_output.results }}"
+  loop_control:
+    label: "{{ (item.stdout | from_json).Name }}"

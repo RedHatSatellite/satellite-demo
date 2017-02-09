@@ -1,0 +1,10 @@
+# vim: sw=2 ai ts=102
+---
+- name: Login to oVirt manager
+  ovirt_auth:
+    url: "{{ ovirt_url }}"
+    username: "{{ ovirt_user }}"
+    password: "{{ ovirt_pass }}"
+    insecure: "{{ ovirt_insecure }}"
+  when: ovirt_auth is not defined
+  run_once: True

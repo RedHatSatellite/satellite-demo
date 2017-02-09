@@ -1,0 +1,8 @@
+# vim: sw=2 ai ts=10240
+---
+- name: Provision Demo VMs
+  hosts: demo-vms
+  gather_facts: false
+  connection: local
+  roles:
+    - vms-ovirt

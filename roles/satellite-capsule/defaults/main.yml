@@ -1,0 +1,7 @@
+---
+# defaults file for satellite
+
+satellite_user: admin
+satellite_pass: redhat123
+satellite_default_location: LocalNet
+satellite_default_organization: Demo62

@@ -1,0 +1,12 @@
+#!/bin/sh
+
+proxy=$1
+shift 1
+
+if [ -z "$proxy" ]
+then
+  echo "Usage: $0 proxy_host ssh-args..."
+  exit 1
+fi
+
+exec ssh -M -o ControlPath="/tmp/proxy-%h-%p-%r" -o ProxyCommand="ssh -W %h:%p -q root@$proxy" "$@"

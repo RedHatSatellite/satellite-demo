@@ -1,0 +1,7 @@
+---
+# vim: sw=4 ts=102 ai
+# tasks file for satellite
+- include: install_packages.yml
+  tags: [satellite,packages]
+- include: network.yml
+  tags: [satellite,networks]

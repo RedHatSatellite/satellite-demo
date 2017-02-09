@@ -1,0 +1,51 @@
+# vim: sw=2 ai ts=10240
+---
+############
+# Customize these via the all/customize.yml file
+############
+
+############
+# minimum requirements
+# - 16 Gigs of RAM
+# - 4 CPUs
+############
+vm_memory: 16GiB
+vm_cpucount: '4'
+
+############
+# Satellite has different subscriptionts
+############
+subscription_ak: "{{ satellites_subscription_ak }}"
+
+############
+# Need a disk for var and for mongodb
+############
+vm_extra_disks:
+  - name: vardisk
+    size: '60GiB'
+    storage_domain: "{{ satellites_storage_domain }}"
+
+############
+# /var needs to be big, and copy it down
+# /var/lib/mongodb needs to be big, but it's read ahead neds to be set
+############
+lvm:
+  - vg: rhel-sat
+    pvs: /dev/vdb
+    lvs:
+      - lv: var
+        size: 45G
+        fs: xfs
+        mp: /var
+        rsync: True
+      - lv: mongodb
+        size: +100%FREE
+        fs: xfs
+        mp: /var/lib/mongodb
+        rsync: False
+        readahead: 16
+
+############
+# Defining this will really speed things up
+############
+subscription_mirror: "{{ satellite_subscription_mirror | default({}) }}"

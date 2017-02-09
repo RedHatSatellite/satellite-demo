@@ -1,0 +1,45 @@
+# vim: sw=2 ai ts=104
+---
+- name: Check for CA cert for local docker registry
+  stat:
+    path: "/etc/pki/ca-trust/source/anchors/{{ item.split(':')[0] }}.crt"
+  register: cert_check
+  with_items: "{{ add_certificates }}"
+  when: vms_clean is not defined
+  tags: [ certificates ]
+
+- name: set_fact needed to keep it from blowing up during clean
+  set_fact:
+    cert_check:
+      results:
+        - stat:
+            exists: False
+          item:
+  when: vms_clean is defined
+
+- name: Grab CA cert if needed
+  connection: local
+  getca:
+    host: "{{ item[1] }}"
+    certificates: "{{ certificates }}"
+  register: cert_check_getca
+  when: item[0] == False and vms_clean is not defined
+  with_together:
+    - "{{ cert_check.results|map(attribute='stat.exists')|default(False)|list }}"
+    - "{{ cert_check.results|map(attribute='item')|default('')|list }}"
+  tags: [ certificates ]
+
+- name: Copy CA cert for local docker registry
+  copy:
+    dest: "/etc/pki/ca-trust/source/anchors/{{ item[1].split(':')[0] }}.crt"
+    content: "{{ certificates[item[1]] }}"
+  when: item[0] == False and vms_clean is not defined
+  with_together:
+    - "{{ cert_check.results|map(attribute='stat.exists')|list }}"
+    - "{{ cert_check.results|map(attribute='item')|list }}"
+  notify: regenerate CA trust
+  tags: [ certificates ]
+
+- meta: flush_handlers
+  when: vms_clean is not defined
+  tags: [ certificates ]

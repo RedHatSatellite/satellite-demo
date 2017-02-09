@@ -1,0 +1,280 @@
+---
+# vim: sw=2 ts=102 ai
+
+###
+# Default Org and Location sanity
+###
+- name: "Provisioning | Making sure default location and org belong to one another"
+  command: "/usr/bin/hammer location add-organization --name={{ LOC }} {{ORG}}"
+  changed_when: false
+  with_items:
+    - "{{ LOC }}"
+  loop_control:
+    label: "/usr/bin/hammer location add-organization --name={{ LOC }} {{ORG}}"
+
+###
+# Default domain and puppet env sanity
+###
+- name: "Provisioning | Making sure default domain belongs to the default location and org"
+  command: "/usr/bin/hammer {{item.0.type}} {{item.1.type}} --{{item.1.param}} {{item.1.value}} --name '{{item.0.name}}'"
+  changed_when: false
+  with_nested:
+    - 
+      - type: organization
+        name: "{{_ORG}}"
+      - type: location
+        name: "{{LOC}}"
+    -
+      - type: add-environment
+        param: environment-id
+        value: "1"
+      - type: add-domain
+        param: domain-id
+        value: "1"
+  loop_control:
+    label: "/usr/bin/hammer {{item.0.type}} {{item.1.type}} --{{item.1.param}} {{item.1.value}} --name '{{item.0.name}}'"
+
+###
+# Default host sanity
+###
+- name: "Provisioning | Grabing default host info"
+  command: "/usr/bin/hammer --output json host info --name='{{ hostname }}'"
+  changed_when: false
+  register: hammer_output
+
+- name: "Provisioning | making sure default host has a location and an org"
+  set_fact:
+    need_org: "{{ item.Organization is not defined }}"
+    need_loc: "{{ item.Location is not defined }}"
+    default_id: "{{ item.Id }}"
+  with_items:
+    - "{{ hammer_output.stdout | from_json }}"
+  loop_control:
+    label: "{{ item.Name }}"
+
+- name: "Provisioning | Making sure default host has a location and org"
+  command: "/usr/bin/hammer host update --id='{{ default_id }}' {%if need_loc %}--location='{{LOC}}'{%endif%} {%if need_org%}--organization='{{ satellite_default_organization }}'{%endif%}"
+  when: need_org or need_loc
+  with_items:
+    - "{{ LOC }}"
+  loop_control:
+    label: "/usr/bin/hammer host update --id='{{ default_id }}' {%if need_loc %}--location='{{LOC}}'{%endif%} {%if need_org%}--organization='{{ satellite_default_organization }}'{%endif%}"
+
+###
+# Setup our subnets
+###
+- name: "Provisioning | building subnet map"
+  set_fact:
+    tmp: |
+      [ {% for h in groups.proxied %}
+      [ "{{ hostvars[h].ip.split(':')[2] | ipaddr(0) }}", "{{ hostvars[h].ip.split(':')[2] | ipaddr('subnet') | ipaddr(hostvars[h].gw) | ipaddr('address') }}" ],
+        {% endfor %} ]
+  with_items: "{{ groups.proxied }}"
+
+- name: "Provisioning | coerce into set"
+  set_fact:
+    subnets: "{{ dict(tmp).items() | list }}"
+
+- name: "Provisioning | grab subnet list"
+  command: "/usr/bin/hammer --output json subnet list"
+  changed_when: false
+  register: hammer_output
+
+- name: "Provisioning | check if subnets are created" 
+  set_fact:
+    ti: dummy
+  changed_when: "item.0 not in hammer_output.stdout | from_json | map(attribute='Name') | list"
+  register: tmp
+  with_items: "{{ [ subnets ]}}"
+
+- name: "Provisioning | create subnet if required"
+  command: "/usr/bin/hammer subnet create --organizations='{{_ORG}}' --boot-mode=Static --dns-primary {{item.item.1}} --name '{{item.item.0}}' --network='{{ item.item.0 | ipaddr('network') }}' --mask='{{ item.item.0 | ipaddr('netmask') }}' --gateway='{{ item.item.1 }}'  --ipam=None --tftp-id=1"
+  when: item.changed
+  with_items: "{{ tmp.results }}"
+  loop_control:
+    label: "/usr/bin/hammer subnet create --organizations='{{_ORG}}' --boot-mode=Static --dns-primary {{item.item.1}} --name '{{item.item.0}}' --network='{{ item.item.0 | ipaddr('network') }}' --mask='{{ item.item.0 | ipaddr('netmask') }}' --gateway='{{ item.item.1 }}'  --ipam=None --tftp-id=1"
+
+- name: "Provisioning | ensure subnets are attached to location"
+  command: "/usr/bin/hammer location add-subnet --name='{{LOC}}' --subnet='{{item.item.0}}'"
+  with_items: "{{ tmp.results }}"
+  changed_when: false
+  loop_control:
+    label: "/usr/bin/hammer location add-subnet --name='{{LOC}}' --subnet='{{item.item.0}}'"
+
+###
+# Looking for medium for kickstarts
+###
+- name: "Provisioning | Locate kickstart label"
+  command: "/usr/bin/hammer --output json repository info {{ORG}} --product '{{PROD}}' --name '{{SAT_MAP.kickstart.1}}'"
+  register: hammer_output
+  changed_when: false
+
+- name: "Provisioning | Save repository label for search"
+  set_fact:
+    kickstart_label: "{{ (hammer_output.stdout | from_json).Label }}"
+
+- name: "Provisioning | Locate medium for kickstart"
+  command: "/usr/bin/hammer --output json medium list --search '{{ kickstart_label }}'"
+  register: hammer_output
+  changed_when: false
+
+- name: "Provisioning | Save kickstart medium id"
+  set_fact:
+    medium_id: "{{ hammer_output.stdout | from_json | map(attribute='Id') | list | first }}"
+
+###
+# Find OS from medium
+###
+- name: "Provisioning | Looking up OS from medium" 
+  command: "/usr/bin/hammer --output json medium info --id '{{ medium_id }}'"
+  register: hammer_output
+  changed_when: false
+
+- name: "Provisioning | Saving 1st OS from medium"
+  set_fact:
+    medium_os: "{{ (hammer_output.stdout | from_json)['Operating systems'] | sort(attribute='title') | last }}"
+  
+###
+# Hostgroup Creation
+###
+- name: "Provisioning | get current Host Groups"
+  command: "/usr/bin/hammer --output json hostgroup list {{ORG}}"
+  changed_when: false
+  register: hammer_output
+
+- name: "Provisioning | convert output to json"
+  set_fact:
+    hammer_output: "{{ hammer_output.stdout | from_json }}"
+
+- name: "Provisioning | Check if HGs have been created"
+  set_fact:
+    ti: dummy
+  register: tmp
+  when: item.ak # we only create HG for entires that have AK
+  changed_when: "item.name not in hammer_output | map(attribute='Name')"
+  with_items: "{{ satellite_hammer_views }}"
+  loop_control:
+    label: "HG={{ item.name }}"
+
+# I left out the subnet and password on purpose
+- name: "Provisioning | Create HG if needed"
+  command: "/usr/bin/hammer hostgroup create --name='{{item.item.name}}' --organizations='{{_ORG}}' --architecture={{ satellite_hammer_basearch }} --domain-id=1 --medium-id={{ medium_id }} --operatingsystem-id={{ medium_os.id }} --partition-table='Kickstart default' --puppet-ca-proxy-id=1 --puppet-proxy-id=1"
+  when: item.changed
+  with_items: "{{ tmp.results }}"
+  loop_control:
+    label: "/usr/bin/hammer hostgroup create --name='{{item.item.name}}' --organizations='{{_ORG}}' --architecture={{ satellite_hammer_basearch }} --domain-id=1 --medium-id={{ medium_id }} --operatingsystem-id={{ medium_os.id }} --partition-table='Kickstart default' --puppet-ca-proxy-id=1 --puppet-proxy-id=1"
+
+###
+# setup AK
+###
+- name: "Provisioning | get Activation Keys"
+  command: "/usr/bin/hammer --output json activation-key list {{ORG}}"
+  changed_when: false
+  register: hammer_output
+
+- name: "Provisioning | convert output to json"
+  set_fact:
+    hammer_output: "{{ hammer_output.stdout | from_json }}"
+
+- name: "Provisioning | Check if AKs have been created"
+  set_fact:
+    ti: dummy
+  register: tmp
+  when: item.ak
+  changed_when: "item.ak not in hammer_output | map(attribute='Name')"
+  with_items: "{{ satellite_hammer_views }}"
+  loop_control:
+    label: "AK={{ item.ak }}"
+
+- name: "Provisioning | Create AK if needed"
+  command: "/usr/bin/hammer activation-key create {{ORG}} --name={{item.item.ak}} --content-view='{{item.item.name}}' --lifecycle-environment-id=1 --unlimited-hosts"
+  when: item.changed
+  with_items: "{{ tmp.results }}"
+  loop_control:
+    label: "/usr/bin/hammer activation-key create {{ORG}} --name={{item.item.ak}} --content-view='{{item.item.name}}' --lifecycle-environment-id=1 --unlimited-hosts"
+
+###
+# AK attaching subscriptions
+###
+- name: "Provisioning | getting info on AKs"
+  command: "/usr/bin/hammer --output json activation-key subscriptions {{ORG}} --activation-key={{item.ak}}"
+  register: ak_needed
+  when: item.ak # we only create HG for entires that have AK
+  changed_when: "ak_needed.stdout | from_json | length == 0"
+  with_items: "{{ satellite_hammer_views }}"
+  loop_control:
+    label: "AK={{ item.ak }}"
+
+- name: "Provisioning | locate subscription for Activation Keys"
+  command: "/usr/bin/hammer --output json subscription list {{ORG}}"
+  changed_when: false
+  register: hammer_output
+  when: ak_needed.changed
+
+- name: "Provisioning | calculate subscription to use"
+  set_fact:
+    tmp: |
+      [
+        {% set tmp=hammer_output.stdout | from_json %}
+        {% if satellite_subscription_contract %}
+        {% for item in tmp %}
+        {% if satellite_subscription_contract|string== item.Contract|string %}
+        { 'id': {{ item.ID }}, 'name': '{{ item.Name }}' },
+        {% endif %}
+        {% endfor %}
+        {% else %}
+        {% set item=tmp | sort(attribute='Quantity') | last %}
+        { 'id': {{ item.ID }}, 'name': '{{ item.Name }}' },
+        {% endif %}
+        ]
+  when: not (hammer_output.skipped is defined and hammer_output.skipped)
+
+- name: "Provisioning | only getting first result"
+  set_fact:
+    subscription_info: "{{ tmp| first }}"
+  when: not (hammer_output.skipped is defined and hammer_output.skipped)
+
+- name: "Provisioning | assigning subscriptions to AKs"
+  command: "/usr/bin/hammer activation-key add-subscription {{ORG}} --name='{{item.item.ak}}' --subscription-id={{ subscription_info.id }}"
+  when: item.changed
+  with_items: "{{ ak_needed.results }}"
+  loop_control:
+    label: "AK-{{item.item.ak}}"
+
+- name: "Provisioning | overriding certain repos for AKs"
+  command: "/usr/bin/hammer activation-key content-override --name='{{item.0.ak}}' --value=1 {{ORG}} --content-label='{{item.1}}'"
+  changed_when: false
+  with_subelements:
+    - "{{ satellite_hammer_views }}"
+    - override
+  loop_control:
+    label: "/usr/bin/hammer activation-key content-override --name='{{item.0.ak}}' --value=1 {{ORG}} --content-label='{{item.1}}'"
+
+###
+# Remaster pxeless discovery image
+###
+# - name: "Provisioning | Remastering PXE-less discovery image"
+- name: "Provisioning | getting list of pxe-less discovery image files"
+  command: "/usr/bin/rpm -ql foreman-discovery-image"
+  register: tmp
+  changed_when: false
+
+- name: "Provisioning | locating iso image"
+  set_fact:
+    old_image: "{{ ti }}"
+    new_image: "/root/auto-{{ ti | basename}}"
+  vars:
+    ti: "{{ tmp.stdout_lines | select('search', '\\.iso$') | sort | list | last}}"
+
+- fail:
+    msg: "unable to find pxe-less discovery iso image"
+  when: not old_image or old_image.strip() == ''
+
+- name: "Provisioning | Remastering PXE-less discovery image"
+  command: "/usr/bin/discovery-remaster '{{ old_image }}' 'proxy.url=https://{{hostname}}:9090 proxy.type=proxy fdi.pxauto=1' '{{new_image}}'"
+  args:
+    creates: "{{new_image}}"
+  register: remaster
+
+- debug:
+    msg: "You need to upload {{ new_image }} to your ISO_STORAGE for your virtualization envrionment"

@@ -1,0 +1,36 @@
+# vim: sw=2 ai ts=102
+---
+# need to configure the router before the other machines can get out
+- name: Configure router VMs
+  hosts: routers
+  connection: smart
+  roles:
+    - router
+
+- name: Configure satellite server
+  hosts: satellites
+  connection: smart
+  gather_facts: false
+
+# we need to setup satellite so capsules can register
+- name: Configure satellite server
+  hosts: satellites
+  connection: smart
+  roles:
+    - satellite
+
+# we need to setup capsules for clients
+- name: Configure capsules
+  hosts: capsules
+  connection: smart
+  roles:
+    - rhel
+    - satellite-capsule
+
+# now we can configure the VMs
+- name: Configure rest of VMs 
+  hosts: clients
+  connection: smart
+  roles:
+    - rhel
+    - satellite-client

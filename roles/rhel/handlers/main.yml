@@ -1,0 +1,8 @@
+# vim: sw=2 ai ts=102
+---
+- name: reload udev
+  command: /usr/sbin/udevadm trigger -c add --subsystem-match=block
+
+- name: regenerate CA trust
+  command: /usr/bin/update-ca-trust
+  tags: [ certificates ]

@@ -1,0 +1,24 @@
+# vim: sw=2 ai ts=102
+---
+role_task: create
+ovirt_url: "https://rhevm/ovirt-engine/api"
+ovirt_user: "admin@internal"
+ovirt_pass: 'redhat123'
+ovirt_insecure: true
+
+ovirt_tag: demos
+
+vm_cpucount: "1"
+vm_cluster: Home
+vm_template: RHEL7
+vm_memory: 1GiB
+vm_memory_guaranteed: 1GiB
+vm_osid: rhel_7x64
+vm_type: server
+vm_nics:
+  - name: rhevm
+    profile_name: rhevm
+vm_extra_disks: []
+vm_cloud_init: {}
+
+authorized_ssh_keys: ""
