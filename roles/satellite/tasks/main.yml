@@ -33,7 +33,7 @@
   tags: [satellite-manifest, satellite-hammer, satellite]
 
 - include: satellite_repos.yml
-  tags: [satellite-repos,ssatellite-hammer, satellite]
+  tags: [satellite-repos, satellite-hammer, satellite]
 
 - include: satellite_sync.yml
   tags: [satellite-sync, satellite-hammer, satellite]
