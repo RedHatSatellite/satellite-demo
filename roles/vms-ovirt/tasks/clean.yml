@@ -10,7 +10,3 @@
   changed_when: ovirt_vms.changed | default(false) or (ovirt_vms.failed | default(false) and ovirt_vms.msg == 'HTTP response code is 404.')
   failed_when: ovirt_vms.failed | default(false) and ovirt_vms.msg != 'HTTP response code is 404.'
   tags: [ovirt]
-
-- name: Removing ssh key for host
-  command: /usr/bin/ssh-keygen -R "{{ ansible_host }}"
-  tags: [ssh,ovirt]
