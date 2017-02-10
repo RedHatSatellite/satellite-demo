@@ -7,37 +7,10 @@
   changed_when: False
   when: repo_ids is not defined
 
-- name: convert result to key pair list
+- name: assign repos to dictionary
   set_fact:
-    ti: "{{ [ item.Name, item.Id ] }}"
-  with_items: "{{ hammer_output.stdout | default('[]') | from_json }}"
-  register: tmp
-  loop_control:
-    label: "{{[ item.Name, item.Id ]}}"
+    repo_ids: "{{ dict(json | json_query('results[*].[Name, Id]')) }}"
   when: repo_ids is not defined
-
-- name: coerce list into dictionary
-  set_fact:
-    tl: "{{ dict(tmp.results | map(attribute='ansible_facts') | map(attribute='ti') | list) }}"
-  when: repo_ids is not defined
-
-- name: map repo_ids to repo map
-  set_fact:
-    ti: "{{ [ item.key, tl[item.value.1] ] }}"
-  register: tmp
-  with_dict: "{{ SAT_MAP }}"
-  loop_control:
-    label: "{{ item.key }}"
-  when: repo_ids is not defined
-
-- name: coerce result into dictionary
-  set_fact:
-    repo_ids: "{{ dict(tmp.results | map(attribute='ansible_facts') | map(attribute='ti') | list) }}"
-  when: repo_ids is not defined
-
-- name: clean up temporary variables
-  set_fact:
-    ti: null
-    tl: null
-    tmp: null
-  when: ti or tl or tmp
+  vars:
+    json:
+      results: "{{ hammer_output.stdout | default('[]') | from_json }}"
