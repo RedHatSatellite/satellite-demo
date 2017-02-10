@@ -261,16 +261,16 @@
 
 - name: "Provisioning | locating iso image"
   set_fact:
-    old_image: "{{ ti }}"
-    new_image: "/root/auto-{{ ti | basename}}"
+    old_image: "{{ iso_lines }}"
+    new_image: "/root/auto-{{ iso_lines | basename}}"
   vars:
-    ti: "{{ tmp.stdout_lines | select('search', '\\.iso$') | sort | list | last}}"
+    iso_lines: "{{ tmp.stdout_lines | select('search', '\\.iso$') | sort | list | last}}"
 
 - fail:
     msg: "unable to find pxe-less discovery iso image"
   when: not old_image or old_image.strip() == ''
 
-- name: "Provisioning | Remastering PXE-less discovery image"
+- name: "Provisioning | Remastering PXE-less discovery image to {{new_image}}"
   command: "/usr/bin/discovery-remaster '{{ old_image }}' 'proxy.url=https://{{hostname}}:9090 proxy.type=proxy fdi.pxauto=1' '{{new_image}}'"
   args:
     creates: "{{new_image}}"
