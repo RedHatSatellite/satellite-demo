@@ -189,21 +189,25 @@ Obviously you need Ansible, but if you don't use the existing `Docker` image, th
 
 Via the pip module or installed:
 * (via yum) bind-utils
+* pip - update it
+* pycurl with the environment variable `PYCURL_SSL_LIBRARY=nss` or you'll break your yum
 * beautifulsoup4
-* dnspython
-* netaddr
-* ovirt-engine-sdk-python
-* requests
+* dnspython - for various DNS filters
+* jinja2 < version 2.9 - this is needed for the `dict()` function that's not in version 2.7, and we can't use 2.9
+* jmespath - for `json_query()` filter
+* netaddr - for the `ipaddr` filter
+* ovirt-engine-sdk-python - to use `ovirt_*` modules
+* pyOpenSSL - for the SSL socket stuff in python
+* requests - might not need this one actually **TODO**
 
-If you use pip, some of those above will need to be compiled, and you'll need (for fedora at least):
-* @development-tools - to compile anything
+If you use pip, some of those above will need to be compiled, and you'll need (for centos at least):
+* @development - to compile anything
 * libcurl-devel
 * libxml2-devel
 * libxslt-devel
 * openssl-devel
 * python-devel
 * python-firewall
-* python-pycurl
 * redhat-rpm-config
 
 Host File
