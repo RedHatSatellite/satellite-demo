@@ -29,6 +29,8 @@ RUN	id \
 	&& pip install -U pip \
 	&& pip install -U beautifulsoup4 \
 	&& pip install -U dnspython \
+	&& pip install -U 'jinja2<2.9' \
+	&& pip install -U jmespath \
 	&& pip install -U netaddr \
 	&& pip install -U ovirt-engine-sdk-python \
 	&& pip install -U pyOpenSSL \
