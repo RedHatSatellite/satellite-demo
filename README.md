@@ -159,6 +159,7 @@ This holds all the variables that are global and can be public:
 ###Special Variables
 
 There are some varibles through the group files that are common in their function.
+* `satellite_hammer_configure_CV_filters` - special variable that kicks off the creation of filters and rules by month ranges. It runs every time in order to update the rules, therefore the variable is set to `False` by default. Set to `True` to enable this for a single run by using the `--extra-vars` flag.
 * `satellite_rhsm_user` - (`satellite` role) used to login into the Red Hat Portal
   - if this and the password are defined then the role will access the portal, and attempt to find and download the `manifest.zip` that matches the name of the current default Organization for the Satellite.
   - if they aren't defined, and the `satellite_manifest_file` is, then the role will copy the `manifest.zip` from the local ansible host, and then upload it into the satellite server.
@@ -167,7 +168,7 @@ There are some varibles through the group files that are common in their functio
 * `satellite_subscription_contract`
   - if not defined, when we look for a subscription to attach to the activation key sorted by highest Quantity
   - if defined, then we will select the first subscription with that contract number
-* `authorized_ssh_keys` - (`rhel` role) if blank will pull in ~/id_rsa.pub
+* `authorized_ssh_keys` - (`rhel` role) if blank will pull in `~/id_rsa.pub`
   - otherwise will use the contents of the variable
 * `nic` dictionary - (global) is auto populated from inventory vars
   - useful for playbooks that don't call a `setup` such as the vm creation tasks

@@ -35,7 +35,7 @@ time ansible-playbook -i inventory.prod configure_vms.yml --limit=satellites --t
 
 echo
 echo "Time the configuration of Satellite 6"
-time ansible-playbook -i inventory.prod configure_vms.yml --limit=satellites --tags=satellite-hammer >> /tmp/benchmark.log
+time ansible-playbook -i inventory.prod configure_vms.yml --limit=satellites --tags=satellite-hammer -e satellite_hammer_configure_CV_filters=true >> /tmp/benchmark.log
 
 cat << EOF
 
