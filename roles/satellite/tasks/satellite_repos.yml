@@ -20,7 +20,7 @@
     label: "{{ item.name }}"
 
 - name: enabling repos
-  command: "/usr/bin/hammer repository-set enable {{ ORG }} --product='{{ item.item.product }}' {{ (item.item.release == True) | ternary('--releasever='+item.item.release, '') }} --basearch={{ item.item.basearch }} --name='{{ item.item.name }}'"
+  command: "/usr/bin/hammer repository-set enable {{ ORG }} --product='{{ item.item.product }}' {{ (item.item.release) | ternary('--releasever='+item.item.release, '') }} --basearch={{ item.item.basearch }} --name='{{ item.item.name }}'"
   when: "{{ item.changed }}"
   with_items: "{{ repos_list.results }}"
   loop_control:
