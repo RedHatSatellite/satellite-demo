@@ -2,3 +2,4 @@ secret.yml
 *.retry
 *.pyc
 *~
+Docker/Dockerfile
