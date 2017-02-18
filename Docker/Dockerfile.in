@@ -2,7 +2,7 @@ FROM docker.io/centos:7
 MAINTAINER Billy Holmes <billy@gonoph.net>
 COPY root/ /
 RUN	uname -a \
-	&& useradd -u 123456789 ansible -U \
+	&& useradd -u ::REPLACE_UID:: ansible -U \
 	&& yum remove -y vim-minimal \
 	&& yum install -y epel-release \
 	&& yum install -y \
@@ -36,4 +36,6 @@ RUN	id \
 	&& pip install -U pyOpenSSL \
 	&& pip install -U requests
 USER ansible
+RUN	id \
+	&& test -r ~/.ssh/id_rsa || ssh-keygen -f ~/.ssh/id_rsa -P ''
 CMD [ "/bin/bash" ]

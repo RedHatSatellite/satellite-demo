@@ -3,4 +3,9 @@
 MYSELF=$(realpath $0)
 DIRNAME=$(dirname $MYSELF)
 DIR=$(realpath $DIRNAME/..)
-docker run --rm --name ansible -v $HOME:/home/ansible:Z -v "$DIR":/tmp/ansible:z -it --workdir=/tmp/ansible ansible:latest
+
+. $DIRNAME/funcs.sh
+
+assign_docker_command
+
+$DOCKER run --rm --name ansible -it -v $DIR:/tmp/ansible:z --workdir=/tmp/ansible ansible:latest
