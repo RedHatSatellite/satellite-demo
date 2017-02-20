@@ -36,7 +36,7 @@ else
 fi
 
 # Docker 1.12 appears not to have the force flag anymore
-docker tag -f 2>&1 | fgrep -q 'argument(s)' && TAGF="-f" || TAGF=""
+docker tag -f 2>&1 | fgrep -q 'unknown shorthand flag' && TAGF="" || TAGF="-f"
 
 $DOCKER build -t ansible:latest .
 VERSION=$( $DOCKER run --rm -i ansible:latest rpm -q --queryformat="%{VERSION}-%{RELEASE}" ansible )
