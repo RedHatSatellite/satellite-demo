@@ -1,5 +1,5 @@
 #!/bin/sh
-
+# vim: sw=2 ts=2 expandtab ai
 # check to see if we're timing ourselves
 _MAGIC_=dRBf33M6y8Z66rai
 
@@ -9,7 +9,7 @@ fi
 
 shift 1
 
-MAX_STAGE=6
+MAX_STAGE=7
 
 while test $# -gt 0 ; do
   case $1 in
@@ -24,7 +24,8 @@ while test $# -gt 0 ; do
   3. Configure the (router)
   4. Configure the (satellite)
   5. Install the packages for Satellite 6
-  6. Setup Satellite 6
+  6. Setup Satellite 6 just before the CV views
+  7. Finish the Satellite 6 installation
 "
       exit 0
       ;;
@@ -39,7 +40,8 @@ while test $# -gt 0 ; do
   esac
 done
 
-echo $"
+header() {
+  echo $"
 This will take a long time, so please be patient:
 If you don't see:
 
@@ -50,6 +52,21 @@ Then there was an error, so review the log at:
   /tmp/benchmark.log
 
 "
+}
+
+alldone() {
+  [ $MAX_STAGE -ne 7 ] && echo $"
+MAX STAGE REACHED == $MAX_STAGE
+"
+  echo $"
+
+ALL DONE!!
+
+"
+  exit 0
+}
+
+header
 
 set -e -E # fast fail
 > /tmp/benchmark.log
@@ -58,29 +75,35 @@ export ANSIBLE_FORCE_COLOR=true
 
 echo "1. First we clean everything up"
 time ansible-playbook -i inventory.prod clean_vms.yml --limit=routers,satellites >> /tmp/benchmark.log
+[ $MAX_STAGE -eq 1 ] && alldone
 
 echo
 echo "2. Time the VM creation of the servers"
 time ansible-playbook -i inventory.prod create_vms.yml --limit=routers,satellites >> /tmp/benchmark.log
+[ $MAX_STAGE -eq 2 ] && alldone
 
 echo
 echo "3. Time the configuration of the router"
 time ansible-playbook -i inventory.prod configure_vms.yml --limit=routers >> /tmp/benchmark.log
+[ $MAX_STAGE -eq 3 ] && alldone
 
 echo
 echo "4. Time the configuration of the satellite"
 time ansible-playbook -i inventory.prod configure_vms.yml --limit=satellites --skip-tags=satellite >> /tmp/benchmark.log
+[ $MAX_STAGE -eq 4 ] && alldone
 
 echo
 echo "5. Time the installation of Satellite 6"
 time ansible-playbook -i inventory.prod configure_vms.yml --limit=satellites --tags=satellite --skip-tags=satellite-hammer >> /tmp/benchmark.log
+[ $MAX_STAGE -eq 5 ] && alldone
 
 echo
-echo "6. Time the configuration of Satellite 6"
+echo "6. Time the manifest, repos, sync, and views"
+time ansible-playbook -i inventory.prod configure_vms.yml --limit=satellites --tags=satellite-manifest,satellite-repos,satellite-sync,satellite-view >> /tmp/benchmark.log
+[ $MAX_STAGE -eq 6 ] && alldone
+
+echo
+echo "7. Time the rest of the configuration"
 time ansible-playbook -i inventory.prod configure_vms.yml --limit=satellites --tags=satellite-hammer -e satellite_hammer_configure_CV_filters=true >> /tmp/benchmark.log
 
-echo $"
-
-ALL DONE!!
-
-"
+alldone
