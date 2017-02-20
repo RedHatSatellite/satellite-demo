@@ -4,18 +4,21 @@
 _MAGIC_=dRBf33M6y8Z66rai
 
 if [ "x$1" != "x$_MAGIC_" ] ; then
-  exec /bin/sh -c "time $0 $_MAGIC_ '$@'"
+  time $0 $_MAGIC_ "$@"
+  exit 0
 fi
 
 shift 1
 
 MAX_STAGE=7
+KEEP=0
 
 while test $# -gt 0 ; do
   case $1 in
     -h | --h | --he | --hel | --help)
       echo $"Usage: benchmark.sh [OPTION]... [maxstage]
   -h, --help  this usage message
+  -k, --keep  keep the current VMs by not running the clean step
   maxstage    maximum stage [1, 2, 3, 4, 5, 6] for execution
 
   [STAGES]
@@ -28,6 +31,10 @@ while test $# -gt 0 ; do
   7. Finish the Satellite 6 installation
 "
       exit 0
+      ;;
+    -k | --k | --ke | --kee | --keep)
+      KEEP=1
+      shift
       ;;
     [123456])
       MAX_STAGE=$1
@@ -74,6 +81,7 @@ set -e -E # fast fail
 export ANSIBLE_FORCE_COLOR=true
 
 echo "1. First we clean everything up"
+[ $KEEP -gt 0 ] && time echo "Not running clean, keeping systems." || \
 time ansible-playbook -i inventory.prod clean_vms.yml --limit=routers,satellites >> /tmp/benchmark.log
 [ $MAX_STAGE -eq 1 ] && alldone
 

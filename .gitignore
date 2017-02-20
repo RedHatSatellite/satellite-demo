@@ -1,4 +1,5 @@
 secret.yml
+vault.yml
 *.retry
 *.pyc
 *~
