@@ -2,7 +2,6 @@
 ---
 role_task: redhat
 lvm: []
-reboot_host: False
 lvm_mounts: []
 certificates: {}
 add_certificates: []
@@ -13,6 +12,8 @@ router_server_ip: "{{ 'localhost' if not router_server else hostvars[router_serv
 
 delegate_ip: "{{ router_server_ip if inventory_hostname in groups.proxied else 'localhost' }}"
 
+# perform yum update or atomic host update after registration
+rhel_updates: False
 # subscription register organization
 subscription_org: "{{ change_me_subscription_org }}"
 # subscription register activiation key
