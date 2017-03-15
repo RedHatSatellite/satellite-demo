@@ -34,3 +34,10 @@
   roles:
     - rhel
     - satellite-client
+#
+# now we can configure regular RHEL VMs
+- name: Configure rest of VMs 
+  hosts: demo-vms !satellites !routers !clients !capsules
+  connection: smart
+  roles:
+    - rhel

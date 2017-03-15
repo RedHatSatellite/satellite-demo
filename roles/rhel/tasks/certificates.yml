@@ -1,5 +1,13 @@
-# vim: sw=2 ai ts=104
 ---
+# vim: sw=2 ai ts=2 expandtab
+- name: Copy extra SSH keys
+  authorized_key:
+    key: "{{ item }}"
+    user: "{{ ansible_user }}"
+  with_items: "{{ extra_authorized_keys }}"
+  loop_control:
+    label: "{{ item.split(' ') | last | truncate(length=20) }}"
+  
 - name: Check for CA cert for local docker registry
   stat:
     path: "/etc/pki/ca-trust/source/anchors/{{ item.split(':')[0] }}.crt"

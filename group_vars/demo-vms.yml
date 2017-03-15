@@ -9,8 +9,8 @@ ansible_user: root
 user_password: "{{ ('redhat123 ' + range(500,1000)|random|string) | hash('sha1') }}"
 hostname: "{{ inventory_hostname }}.{{ domain_name }}"
 
-router_server: "{{ groups['routers'][0] }}"
-router_server_ip: "{{ hostvars[router_server].nic.ip | ipaddr('address')}}"
+router_server: "{{ groups.routers | default([]) | first | default(none) }}"
+router_server_ip: "{{ 'localhost' if not router_server else hostvars[router_server].nic.ip | ipaddr('address')}}"
 
 # default memory for all VMs
 vm_memory: 2GiB
