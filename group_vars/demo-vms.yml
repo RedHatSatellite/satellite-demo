@@ -14,3 +14,5 @@ router_server_ip: "{{ 'localhost' if not router_server else hostvars[router_serv
 
 # default memory for all VMs
 vm_memory: 2GiB
+# default template for all VMs
+vm_template: "{{ vm_rhel_template }}"

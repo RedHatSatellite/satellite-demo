@@ -7,7 +7,7 @@
 ############
 # the template for the router should be atomic host
 ############
-vm_template: "{{ routers_vm_template }}"
+vm_template: "{{ vm_rhel_atomic_template }}"
 
 ############
 # The memory for the router can be 1 gig, though that's officiall less than the

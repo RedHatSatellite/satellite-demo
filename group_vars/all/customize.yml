@@ -23,8 +23,6 @@ ovirt_user: 'demoadmin@IPA'
 # cluster and template information 
 ############
 vm_cluster: 'AMD-Cheap'
-vm_template: rhel-guest-image-7.3-35.x86_64
-routers_vm_template: rhel-atomic-cloud-7.3.1-1.x86_64.rhevm
 routers_storage_domain: wdc-data-1
 satellites_storage_domain: ssd-data
 capsules_storage_domain: wdc-data-1
