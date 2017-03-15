@@ -1,2 +1,11 @@
-# vim: sw=2 ai ts=102
+# vim: sw=2 ai ts=2 expandtab
 ---
+- name: waiting for server start
+  wait_for:
+    host: "{{ ansible_host }}"
+    search_regex: OpenSSH
+    delay: 10
+    port: 22
+    state: started
+  delegate_to: "{{ delegate_ip }}"
+  remote_user: "{{ ansible_user }}"

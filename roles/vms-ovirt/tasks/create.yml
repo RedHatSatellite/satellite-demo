@@ -27,3 +27,4 @@
   register: vm_created
   async: 185
   poll: 5
+  notify: waiting for server start
