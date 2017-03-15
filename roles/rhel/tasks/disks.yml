@@ -104,33 +104,10 @@
     state: present
   when: item.changed
   with_items: "{{ lvm_mounts }}"
+  notify: reboot host
   tags: [mounts]
 
-- set_fact:
-    reboot_host: True
-  when: item.changed
-  with_items: "{{ lvm_mounts }}"
-  tags: [mounts]
-
-- name: restart machine
-  shell: sleep 2 && shutdown -r now "Ansible updates triggered"
-  async: 2
-  poll: 0
-  ignore_errors: true
-  when: reboot_host
-  tags: [mounts]
-
-- name: waiting for server to come back
-  wait_for:
-    host: "{{ ansible_host }}"
-    search_regex: OpenSSH
-    delay: 10
-    port: 22
-    timeout: 60
-  delegate_to: "{{ delegate_ip }}"
-  remote_user: root
-  when: reboot_host
-  tags: [mounts]
+- meta: flush_handlers
 
 - name: "Mounting filesystems"
   mount:

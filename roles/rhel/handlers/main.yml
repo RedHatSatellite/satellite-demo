@@ -6,3 +6,19 @@
 - name: regenerate CA trust
   command: /usr/bin/update-ca-trust
   tags: [ certificates ]
+
+- name: reboot host
+  shell: sleep 2 && shutdown -r now "Ansible updates triggered"
+  async: 2
+  poll: 0
+  ignore_errors: true
+  notify: wait for server to come back
+
+- name: wait for server to come back
+  wait_for:
+    host: "{{ ansible_host }}"
+    search_regex: OpenSSH
+    delay: 10
+    port: 22
+  delegate_to: "{{ delegate_ip }}"
+  remote_user: "{{ ansible_user }}"
