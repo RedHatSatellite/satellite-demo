@@ -5,6 +5,7 @@
     key: "{{ item }}"
     user: "{{ ansible_user }}"
   with_items: "{{ extra_authorized_keys }}"
+  when: vms_clean is not defined
   loop_control:
     label: "{{ item.split(' ') | last | truncate(length=20) }}"
   
