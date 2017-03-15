@@ -8,9 +8,12 @@ ovirt_insecure: true
 
 ovirt_tag: demos
 
+vm_rhel_template: rhel-guest-image-7.3-35.x86_64
+vm_rhel_atomic_template: rhel-atomic-cloud-7.3.1-1.x86_64.rhevm
+
 vm_cpucount: "1"
 vm_cluster: Home
-vm_template: RHEL7
+# vm_template: "{{ vm_rhel_atomic_template }}"
 vm_memory: 1GiB
 vm_memory_guaranteed: 1GiB
 vm_osid: rhel_7x64
