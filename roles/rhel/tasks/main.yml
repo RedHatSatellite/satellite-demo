@@ -15,6 +15,10 @@
   when: "(vms_clean is not defined) and (subscription_mirror) and (ansible_pkg_mgr) and (ansible_pkg_mgr == 'yum' )"
   tags: [configure,mirrors]
 
+- include: upgrade.yml
+  when: vms_clean is not defined and rhel_updates
+  tags: [configure,upgrade]
+
 - include: disks.yml
   when: vms_clean is not defined
   tags: [configure,disks]
