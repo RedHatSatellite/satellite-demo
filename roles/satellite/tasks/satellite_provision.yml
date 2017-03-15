@@ -88,11 +88,11 @@
   with_items: "{{ [ subnets ]}}"
 
 - name: "Provisioning | create subnet if required"
-  command: "/usr/bin/hammer subnet create --organizations='{{_ORG}}' --boot-mode=Static --dns-primary {{item.item.1}} --name '{{item.item.0}}' --network='{{ item.item.0 | ipaddr('network') }}' --mask='{{ item.item.0 | ipaddr('netmask') }}' --gateway='{{ item.item.1 }}'  --ipam=None --tftp-id=1"
+  command: "/usr/bin/hammer subnet create --organizations='{{_ORG}}' --boot-mode=Static --dns-primary {{item.item.1}} --name '{{item.item.0}}' --network='{{ item.item.0 | ipaddr('network') }}' --mask='{{ item.item.0 | ipaddr('netmask') }}' --gateway='{{ item.item.1 }}'  --ipam=None --tftp-id=1 --domain-ids=1"
   when: item.changed
   with_items: "{{ tmp.results }}"
   loop_control:
-    label: "/usr/bin/hammer subnet create --organizations='{{_ORG}}' --boot-mode=Static --dns-primary {{item.item.1}} --name '{{item.item.0}}' --network='{{ item.item.0 | ipaddr('network') }}' --mask='{{ item.item.0 | ipaddr('netmask') }}' --gateway='{{ item.item.1 }}'  --ipam=None --tftp-id=1"
+    label: "/usr/bin/hammer subnet create --organizations='{{_ORG}}' --boot-mode=Static --dns-primary {{item.item.1}} --name '{{item.item.0}}' --network='{{ item.item.0 | ipaddr('network') }}' --mask='{{ item.item.0 | ipaddr('netmask') }}' --gateway='{{ item.item.1 }}'  --ipam=None --tftp-id=1 --domain-ids=1"
 
 - name: "Provisioning | ensure subnets are attached to location"
   command: "/usr/bin/hammer location add-subnet --name='{{LOC}}' --subnet='{{item.item.0}}'"
