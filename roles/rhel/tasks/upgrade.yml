@@ -20,5 +20,5 @@
   when: yum_upgrade.skipped | default(False) and atomic_test.stat.exists | default(False)
   register: atomic_upgrade
   changed_when: |
-    atomic_upgrade.skipped | default(False) and "\nNo upgrade available.\n" in atomic_upgrade.msg
+    atomic_upgrade.changed and "\nNo upgrade available.\n" not in atomic_upgrade.msg
   notify: reboot host
