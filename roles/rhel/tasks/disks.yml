@@ -131,5 +131,6 @@
 - name: "Restore SELinux permissions"
   command: /usr/sbin/restorecon -Rv "{{item.item.mp}}"
   with_items: "{{ mount_results.results }}"
-  when: item.changed
+  when: |
+    item.changed or (item.changed and {{item.item.mp}} == '/' and not ansible_pkg_mgr == 'yum')
   tags: [mounts]
