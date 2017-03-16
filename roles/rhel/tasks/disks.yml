@@ -24,6 +24,7 @@
   filesystem:
     fstype: "{{item.1.fs}}"
     dev: "/dev/{{item.0.vg}}/{{item.1.lv}}"
+  when: item.1.fs
   with_subelements:
     - "{{ lvm }}"
     - lvs
@@ -32,7 +33,7 @@
   command: /usr/bin/true
   args:
     creates: "{{item.1.mp}}/.synchronized"
-  when: item.1.rsync
+  when: item.1.rsync and item.1.mp
   with_subelements:
     - "{{ lvm }}"
     - lvs
@@ -102,7 +103,7 @@
     fstype: "{{item.fs}}"
     opts: discard,noatime
     state: present
-  when: item.changed
+  when: item.changed and item.mp
   with_items: "{{ lvm_mounts }}"
   notify: reboot host
   tags: [mounts]
@@ -113,10 +114,11 @@
   mount:
     name: "{{item.mp}}"
     src: "/dev/{{item.vg}}/{{item.lv}}"
-    fstype: xfs
+    fstype: "{{item.fs}}"
     state: mounted
     opts: discard,noatime
   with_items: "{{ lvm_mounts }}"
+  when: item.mp
   register: mount_results
   tags: [mounts]
 
@@ -131,6 +133,5 @@
 - name: "Restore SELinux permissions"
   command: /usr/sbin/restorecon -Rv "{{item.item.mp}}"
   with_items: "{{ mount_results.results }}"
-  when: |
-    item.changed or (item.changed and {{item.item.mp}} == '/' and not ansible_pkg_mgr == 'yum')
+  when: item.changed and item.item.mp
   tags: [mounts]
