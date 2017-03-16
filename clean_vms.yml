@@ -19,11 +19,12 @@
   roles: [vms-ovirt]
 
 - name: Remove ssh keys
-  hosts: localhost
+  hosts: demo-vms
   gather_facts: false
   connection: local
   tasks: 
     - name: Removing ssh key for host
       command: /usr/bin/ssh-keygen -R "{{ hostvars[item].ansible_host }}"
+      run_once: true
       tags: [ssh,ovirt]
       with_items: "{{ groups['demo-vms'] }}"
