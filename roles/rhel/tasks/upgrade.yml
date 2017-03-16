@@ -5,6 +5,8 @@
     name: '*'
     state: latest
   when: ansible_pkg_mgr == 'yum'
+  async: 600
+  poll: 0
   register: yum_upgrade
   notify: reboot host
 
@@ -21,4 +23,13 @@
   register: atomic_upgrade
   changed_when: |
     atomic_upgrade.changed and "\nNo upgrade available.\n" not in atomic_upgrade.msg
+  notify: reboot host
+
+- name: wait on yum upgrades
+  async_status:
+    jid: "{{ yum_upgrade.ansible_job_id }}"
+  register: job_result
+  when: not yum_upgrade.skipped | default(False)
+  until: job_result.finished
+  retries: 120
   notify: reboot host
