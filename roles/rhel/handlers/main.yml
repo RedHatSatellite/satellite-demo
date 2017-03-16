@@ -12,7 +12,6 @@
   async: 2
   poll: 0
   ignore_errors: true
-  notify: wait for server to come back
 
 - name: wait for server to come back
   wait_for:
@@ -22,3 +21,4 @@
     port: 22
   delegate_to: "{{ delegate_ip }}"
   remote_user: "{{ ansible_user }}"
+  listen: reboot host
