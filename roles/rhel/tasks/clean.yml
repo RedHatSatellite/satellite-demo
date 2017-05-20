@@ -1,12 +1,18 @@
 # vim: sw=2 ai ts=102
 ---
+- set_fact:
+    ansible_host: "{{ ip.split(':') | last | ipaddr('address') }}"
+
+- debug:
+    var: ansible_host
+
 - name: check if direct systems are up
   wait_for:
     host: "{{ ansible_host }}"
     search_regex: OpenSSH
     port: 22
     timeout: 20
-  delegate_to: "{{ delegate_ip }}"
+  # delegate_to: "{{ delegate_ip }}"
   remote_user: root
   when: inventory_hostname in groups.direct
   async: 25

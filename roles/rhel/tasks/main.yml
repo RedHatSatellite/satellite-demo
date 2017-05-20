@@ -1,8 +1,13 @@
 # vim: sw=2 ai ts=102
 ---
+
+- include: assign_facts.yml
+  when: vms_clean is not defined
+  tags: [always,rhel]
+
 - include: clean.yml
   when: vms_clean is defined
-  tags: [configure,subscriptions]
+  tags: [always,rhel]
 
 - include: certificates.yml
   tags: [configure,certificates]

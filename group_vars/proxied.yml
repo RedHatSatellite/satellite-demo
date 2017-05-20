@@ -5,11 +5,16 @@
 ############
 
 ############
-# the dns servers for the proxied hosts are different than the direct ones
-############
-dns_servers: "{{ nic.gw }}"
-
-############
 # This allows us to use the router as a jump box
 ############
-ansible_ssh_common_args: "-o ProxyCommand='ssh -W %h:%p -q root@{{ router_server_ip }}'"
+router_server: "{{ groups.routers.0 if groups.routers else '' }}"
+router_server_ip: "{{ hostvars[router_server].ansible_host | default(router_server) if router_server else '' }}"
+ansible_ssh_common_args: >-
+  {% if router_server and router_server_ip %}
+  -o 'ProxyCommand=ssh -W %h:%p' -q 'root@{{ router_server_ip }}'
+  {% endif %}
+
+############
+# the dns servers for the proxied hosts are different than the direct ones
+############
+dns_servers: "{{ vm_cloud_init_nics.0.gw if vm_cloud_init_nics is defined and vm_cloud_init_nics else '' }}"

@@ -4,25 +4,25 @@
 - name: Configure router VMs
   hosts: routers
   connection: smart
-  roles:
-    - router
-
-- name: Configure satellite server
-  hosts: satellites
-  connection: smart
   gather_facts: false
+  roles:
+    - rhel
+    - router
 
 # we need to setup satellite so capsules can register
 - name: Configure satellite server
   hosts: satellites
   connection: smart
+  gather_facts: false
   roles:
+    - rhel
     - satellite
 
 # we need to setup capsules for clients
 - name: Configure capsules
   hosts: capsules
   connection: smart
+  gather_facts: false
   roles:
     - rhel
     - satellite-capsule
@@ -31,13 +31,15 @@
 - name: Configure rest of VMs 
   hosts: clients
   connection: smart
+  gather_facts: false
   roles:
     - rhel
     - satellite-client
-#
+
 # now we can configure regular RHEL VMs
 - name: Configure rest of VMs 
   hosts: demo-vms !satellites !routers !clients !capsules
   connection: smart
+  gather_facts: false
   roles:
     - rhel

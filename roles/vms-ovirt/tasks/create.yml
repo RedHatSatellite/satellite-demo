@@ -1,13 +1,6 @@
 # vim: sw=2 ai ts=102
 ---
-- name: add personal ssh key to authorized_ssh_keys
-  set_fact:
-    authorized_ssh_keys: "- {{ lookup('file', '~/.ssh/id_rsa.pub') }}"
-  when: (authorized_ssh_keys|default("")).strip() == ""
-  tags: [certificates]
-  run_once: True
-
-- name: Create VMs async
+- name: Create VMs
   ovirt_vms:
     auth: "{{ ovirt_auth }}"
     name: "{{ inventory_hostname }}"
@@ -25,6 +18,4 @@
     cloud_init: "{{ vm_cloud_init | default(omit) }}"
     wait: true
   register: vm_created
-  async: 185
-  poll: 5
   notify: waiting for server start

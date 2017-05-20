@@ -1,5 +1,10 @@
 # vim: sw=2 ai ts=102
 ---
+
+- include: assign_facts.yml
+  when: vms_clean is not defined
+  tags: [ovirt,login,create,disks,tags]
+
 - include: login.yml
   tags: [ovirt,login,create,disks,tags]
 
@@ -12,6 +17,5 @@
     tags: [ovirt,tags]
   when: vms_clean is not defined
 
-- block: 
-  - include: clean.yml
+- include: clean.yml
   when: vms_clean is defined

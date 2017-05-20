@@ -8,10 +8,6 @@ ovirt_insecure: true
 
 ovirt_tag: demos
 
-router_server: "{{ groups.routers | default([]) | first | default(none) }}"
-router_server_ip: "{{ 'localhost' if not router_server else hostvars[router_server].nic.ip | ipaddr('address')}}"
-delegate_ip: "{{ router_server_ip if inventory_hostname in groups.proxied else 'localhost' }}"
-
 vm_rhel_template: rhel-guest-image-7.3-35.x86_64
 vm_rhel_atomic_template: rhel-atomic-cloud-7.3.1-1.x86_64.rhevm
 
@@ -22,10 +18,9 @@ vm_memory: 1GiB
 vm_memory_guaranteed: 1GiB
 vm_osid: rhel_7x64
 vm_type: server
-vm_nics:
-  - name: rhevm
-    profile_name: rhevm
+vm_nics: []
 vm_extra_disks: []
-vm_cloud_init: {}
+
+use_cloud_init: true
 
 authorized_ssh_keys: ""
