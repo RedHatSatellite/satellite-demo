@@ -77,6 +77,6 @@
           - ifdown eth0
           - ifup eth0
         {% endif %}
-          - sed -i '/^datasource_list: /d' /etc/cloud/cloud.cfg; echo 'datasource_list: ["NoCloud", "ConfigDrive"]' >> /etc/cloud/cloud.cfg
+          - echo c2VkIC1pICIvXmRhdGFzb3VyY2VfbGlzdDogL2QiIC9ldGMvY2xvdWQvY2xvdWQuY2ZnIDsgZWNobyAnZGF0YXNvdXJjZV9saXN0OiBbIk5vQ2xvdWQiLCAiQ29uZmlnRHJpdmUiXScgPj4gL2V0Yy9jbG91ZC9jbG91ZC5jZmcK | base64 -d | sh
           - echo "Updated with Cloud-Init" >> /etc/issue
           - sync
