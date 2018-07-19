@@ -5,6 +5,7 @@
   yum:
     name: '*'
     state: latest
+  notify: reboot host
 
 - name: remove ntp
   yum:
@@ -24,5 +25,5 @@
 
 - name: Install Satellite packages
   yum:
-    name: "satellite, bind-utils, pulp-admin-client, pulp-rpm-admin-extensions, pulp-rpm-handlers"
+    name: "{{ satellite_packages | join(',') }}"
     state: present

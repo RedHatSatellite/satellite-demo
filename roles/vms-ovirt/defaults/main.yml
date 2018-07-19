@@ -1,6 +1,5 @@
-# vim: sw=2 ai ts=102
+# vim: sw=2 ai nowrap expandtab
 ---
-role_task: create
 ovirt_url: "https://rhevm/ovirt-engine/api"
 ovirt_user: "admin@internal"
 ovirt_pass: 'redhat123'
@@ -11,6 +10,7 @@ ovirt_tag: demos
 vm_rhel_template: rhel-guest-image-7.3-35.x86_64
 vm_rhel_atomic_template: rhel-atomic-cloud-7.3.1-1.x86_64.rhevm
 
+vm_name: "{{ inventory_hostname }}"
 vm_cpucount: "1"
 vm_cluster: Home
 # vm_template: "{{ vm_rhel_atomic_template }}"
@@ -20,7 +20,8 @@ vm_osid: rhel_7x64
 vm_type: server
 vm_nics: []
 vm_extra_disks: []
+# size is in GiB - ignored if it's less than 10
+vm_primary_disk_size: 0
+vm_clone: false
 
-use_cloud_init: true
-
-authorized_ssh_keys: ""
+use_cloud_init: false

@@ -3,6 +3,6 @@
 - name: "Attach tags"
   ovirt_tag:
     auth: "{{ ovirt_auth }}"
-    vm_name: "{{ inventory_hostname }}"
+    vm_name: "{{ vm_name }}"
     state: present
     name: "{{ ovirt_tag }}"

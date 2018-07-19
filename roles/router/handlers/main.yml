@@ -5,7 +5,8 @@
     name: dnsmasq
     state: restarted
     enabled: True
+  tags: [ always ]
 
 - name: restart iptables
-  listen: "regenerate CA trust"
   include: "handler_task_docker.yml"
+  tags: [ always ]

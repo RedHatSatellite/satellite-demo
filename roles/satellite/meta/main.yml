@@ -1,4 +1,0 @@
----
-# vim: sw=2 ts=102 ai
-dependencies:
-  - { role: rhel, subscription_repos: "{{ satellite_repos }}" }

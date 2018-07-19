@@ -3,7 +3,7 @@
 - name: Removing VM
   ovirt_vms:
     auth: "{{ ovirt_auth }}"
-    name: "{{ inventory_hostname }}"
+    name: "{{ vm_name }}"
     cluster: "{{ vm_cluster }}"
     state: absent
   register: ovirt_vms

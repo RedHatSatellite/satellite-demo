@@ -12,14 +12,14 @@
 
 - name: add our extra interfaces
   shell: >
-    if nmcli c show {{ item.name }} | grep ipv4.addresses | grep -q {{ item.ip }} ; then
+    if nmcli c show {{ item.ifname }} | grep ipv4.addresses | grep -q {{ item.ip }} ; then
       exit 0;
     else
-      nmcli c delete {{ item.name }} || true;
-      nmcli c add type ethernet con-name {{ item.name }} ifname {{ item.name }} autoconnect yes save yes ip4 {{ item.ip }} &&
+      nmcli c delete {{ item.ifname }} || true;
+      nmcli c add type ethernet con-name {{ item.ifname }} ifname {{ item.ifname }} autoconnect yes save yes ip4 {{ item.ip }} &&
       echo "changed" 1>&2
     fi
-  with_items: "{{ nmcli_extra_ifaces }}"
+  with_items: "{{ vm_cloud_init_nics[1:] | list }}"
   register: nmcli_result
   changed_when: >
     nmcli_result.rc == 0 and ("changed" in nmcli_result.stderr)

@@ -9,4 +9,3 @@ satellite_server_ip: "{{ lookup('gethostbyname', hostvars[satellite_server].ansi
 
 docker_haproxy: docker.io/haproxy
 docker_ovirt_agent: registry.access.redhat.com/rhev4/rhevm-guest-agent:latest
-nmcli_extra_ifaces: []

@@ -1,17 +1,81 @@
-# vim: sw=2 ai ts=102
+# vim: ts=2 sw=2 expandtab ai
 ---
-- name: reload udev
-  command: /usr/sbin/udevadm trigger -c add --subsystem-match=block
 
-- name: regenerate CA trust
-  command: /usr/bin/update-ca-trust
-  tags: [ certificates ]
+- name: restart network
+  shell: |
+    ifdown {{ ansible_default_ipv4.alias }} ; ifup {{ ansible_default_ipv4.alias }}
+  notify:
+    - stop docker
+    - start docker
 
-- name: reboot host
+- name: restart sshd
+  systemd:
+    name: sshd
+    state: restarted
+
+- name: stop docker
+  when: docker_storage_dev | length > 0
+  systemd:
+    state: stopped
+    name: docker
+
+- name: add docker group
+  when: docker_storage_dev | length > 0
+  user:
+    name: "{{ ansible_user }}"
+    append: true
+    groups: docker
+
+- name: remove docker-pool
+  when: docker_storage_dev | length > 0
+  lvol:
+    vg: atomicos
+    lv: docker-pool
+    state: absent
+    force: yes
+
+- name: clear docker-storage
+  when: docker_storage_dev | length > 0
+  file:
+    path: "/etc/sysconfig/docker-storage"
+    state: absent
+
+- name: remove lib docker
+  when: docker_storage_dev | length > 0
+  file:
+    path: "/var/lib/docker"
+    state: absent
+
+- name: run docker-storage-setup
+  when: docker_storage_dev | length > 0
+  systemd:
+    state: restarted
+    name: docker-storage-setup
+
+- name: expand root lv
+  when: "(ansible_mounts | to_json | from_json | json_query(\"[?mount=='/'].device | [?contains(@, 'atomicos')]\")) | length > 0"
+  lvol:
+    vg: atomicos
+    lv: root
+    size: 100%PVS
+
+- name: expand root xfs
+  command: "/usr/sbin/xfs_growfs /"
+
+- name: start docker
+  when: docker_storage_dev | length > 0
+  systemd:
+    state: started
+    enabled: true
+    name: docker
+
+- name: rebooting host
+  listen: reboot host
   shell: sleep 2 && shutdown -r now "Ansible updates triggered"
   async: 2
   poll: 0
   ignore_errors: true
+  tags: [ always ]
 
 - name: wait for server to come back
   wait_for:
@@ -19,6 +83,7 @@
     search_regex: OpenSSH
     delay: 10
     port: 22
-  delegate_to: "{{ delegate_ip }}"
-  remote_user: "{{ ansible_user }}"
+    state: started
+  delegate_to: localhost
   listen: reboot host
+  tags: [ always ]

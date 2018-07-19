@@ -31,6 +31,8 @@ frontend  http
     option httplog
     option forwardfor       except 127.0.0.0/8
 
+{% set satellite_server_ip = hostvars[satellite_server].ip | default('eth0:eth0:127.0.01') %}
+{% set satellite_server_ip = (satellite_server_ip.split(',') | first).split(':') | last | ipaddr('address') %}
 {% for host in groups['clients'] %}
 ####
 #### Redirect Rule for Host {{host}} ####
@@ -56,8 +58,10 @@ backend sat_http
     server      http_sat {{satellite_server_ip}}:80 check
 
 {% for host in groups['clients'] %}
+{% set ip = hostvars[host].ip | default('eth0:eth0:127.0.0.1') %}
+{% set ip = (ip.split(',') | first).split(':') | last | ipaddr('address') %}
 backend {{host}}_http
     mode http
     balance     roundrobin
-    server      {{host}} {{hostvars[host].ansible_host}}:80 check
+    server      {{host}} {{ ip }}:80 check
 {% endfor %}

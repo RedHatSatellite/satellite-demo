@@ -1,33 +1,10 @@
 # vim: sw=2 ai ts=2 expandtab
 ---
 
-- name: assign_facts - authorized_ssh_keys - look up from local user if needed
+- name: fix booleans
   set_fact:
-    authorized_ssh_keys: "- {{ lookup('file', '~/.ssh/id_rsa.pub') }}"
-  when: |
-    vms_clean is not defined and (authorized_ssh_keys|default("")).strip() == ""
-  run_once: True
-
-- name: assign_facts - network interfaces - if ip is defined, reset nics list
-  set_fact:
-    vm_nics: []
-    vm_cloud_init_nics: []
-  when: ip is defined and ip
-
-- name: assign_facts - network interfaces - append nics to arrays
-  set_fact:
-    vm_nics: "{{ vm_nics + [ dict(name=ii[0], profile_name=ii[0]) ] }}"
-    vm_cloud_init_nics: |
-      {{ vm_cloud_init_nics + [
-        dict( 
-          ifname=ii[1],
-          ip=ii[2] | ipaddr('host'),
-          gw=ii[2] | ipaddr('subnet') | ipaddr(gw | default(1)) | ipaddr('address') )
-          ] }}
-  with_items: "{{ (ip | default('')).split(',') }}"
-  when: item and ii
-  vars:
-    ii: "{{ item.split(':') }}"
+    use_cloud_init: "{{ use_cloud_init | bool }}"
+    vm_clone: "{{ vm_clone | bool }}"
 
 - name: assign_facts - cloud_init - create if needed
   set_fact:
@@ -42,7 +19,7 @@
         "nic_gateway": "{{ vm_cloud_init_nics.0.gw }}",
         "nic_name": "{{ vm_cloud_init_nics.0.ifname }}",
         "nic_on_boot": true,
-        "nic_boot_protocol": "STATIC",
+        "nic_boot_protocol": "static",
         {% endif %}
         {% if dns_servers | default('') %}
         "dns_servers": "{{ dns_servers }}",
@@ -57,26 +34,34 @@
   vars:
     pw: "{{ user_password if user_password | default('')  else ( 'redhat123 ' + range(500,1000)|random|string) | hash( 'sha1') }}"
 
-- name: assign_facts - cloud_init - assign run_cmd to cloud_init if needed
+- name: assign_facts - cloud_init - create run_cmd
   set_fact:
-    vm_cloud_init: |
-      {{ dict(
-        vm_cloud_init.items() +
-        vm_cloud_init_runcmd.items()) }}
-  when: use_cloud_init and vm_cloud_init and vm_cloud_init.root_password is defined
-  vars:
     vm_cloud_init_runcmd:
       custom_script: |
         runcmd:
+          - hostnamectl set-hostname "{{ hostname }}"
           - useradd demo
           - passwd demo --stdin <<< "{{ vm_cloud_init.root_password }}"
-          - ifdown eth0
-          - ifup eth0
+          - nmcli c modify "System eth0" connection.id eth0
         {% if dns_servers | default('') and dns_search | default('') %}
-          - nmcli c modify "System eth0" connection.id eth0 ipv4.dns "{{ dns_servers }}" ipv4.dns-search "{{ dns_search }}"
+          - nmcli c modify eth0 ipv4.dns "{{ dns_servers }}" ipv4.dns-search "{{ dns_search }}"
+        {% endif %}
+        {% if vm_cloud_init_nics is defined and vm_cloud_init_nics.0 is defined and vm_cloud_init_nics.0.gw is defined %}
+          - nmcli c modify eth0 ipv4.gateway "{{ vm_cloud_init_nics.0.gw }}"
+        {% endif %}
           - ifdown eth0
           - ifup eth0
-        {% endif %}
+          - systemctl restart NetworkManager
+          - touch /etc/cloud/cloud-init.disabled
           - echo c2VkIC1pICIvXmRhdGFzb3VyY2VfbGlzdDogL2QiIC9ldGMvY2xvdWQvY2xvdWQuY2ZnIDsgZWNobyAnZGF0YXNvdXJjZV9saXN0OiBbIk5vQ2xvdWQiLCAiQ29uZmlnRHJpdmUiXScgPj4gL2V0Yy9jbG91ZC9jbG91ZC5jZmcK | base64 -d | sh
           - echo "Updated with Cloud-Init" >> /etc/issue
           - sync
+  when: use_cloud_init and vm_cloud_init and vm_cloud_init.root_password is defined
+
+- debug: 
+    var: vm_cloud_init_runcmd
+
+- name: assign_facts - cloud_init - assign run_cmd to cloud_init if needed
+  set_fact:
+    vm_cloud_init: "{{ vm_cloud_init | combine(vm_cloud_init_runcmd) }}"
+  when: use_cloud_init and vm_cloud_init and vm_cloud_init.root_password is defined

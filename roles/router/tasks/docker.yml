@@ -19,7 +19,7 @@
       - /:/host
       - /proc:/hostproc
       - /dev/virtio-ports/com.redhat.rhevm.vdsm:/dev/virtio-ports/com.redhat.rhevm.vdsm
-  when: docker_ovirt_agent is not none
+  when: docker_ovirt_agent is defined and docker_ovirt_agent
   async: 300
   poll: 0
   register: docker_ovirt_agent_async
@@ -57,7 +57,7 @@
     async: 300
     poll: 0
     register: docker_haproxy_async
-  when: docker_haproxy is not none
+  when: docker_haproxy is not none and docker_haproxy
 
 - name: "Waiting on docker containers to start"
   async_status: jid={{ item }}
@@ -65,6 +65,4 @@
   until: docker_result.finished
   retries: 20
   delay: 15
-  with_items:
-    - "{{ docker_ovirt_agent_async.ansible_job_id | default(0) }}"
-    - "{{ docker_haproxy_async.ansible_job_id | default(0) }}"
+  with_items: "{{ [ docker_ovirt_agent_async, docker_haproxy_async ] | map(attribute='ansible_job_id') | select('defined') | list }}"

@@ -3,17 +3,18 @@
 - name: Create VMs
   ovirt_vms:
     auth: "{{ ovirt_auth }}"
-    name: "{{ inventory_hostname }}"
+    name: "{{ vm_name }}"
     template: "{{ vm_template | default(omit) }}"
     cluster: "{{ vm_cluster }}"
     memory: "{{ vm_memory | default(omit) }}"
-    memory_guaranteed: "{{ vm_memory | default(omit) }}"
+    memory_guaranteed: "{{ vm_memory_guaranteed | default(omit) }}"
     high_availability: false
-    clone: false
+    clone: "{{ vm_clone }}"
     cpu_sockets: "{{ vm_cpucount | default(omit) }}"
     operating_system: "{{ vm_osid | default(omit) }}"
+    boot_devices: "{{ vm_boot_devices | default(omit) }}"
     type: "{{ vm_type | default(omit) }}"
-    state: present
+    state: "{{ vm_state | default('running') }}"
     nics: "{{ vm_nics | default(omit) }}"
     cloud_init: "{{ vm_cloud_init | default(omit) }}"
     wait: true

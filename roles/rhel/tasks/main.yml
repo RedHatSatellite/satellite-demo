@@ -1,29 +1,36 @@
-# vim: sw=2 ai ts=102
+# vim: ts=2 sw=2 expandtab ai
 ---
 
-- include: assign_facts.yml
-  when: vms_clean is not defined
-  tags: [always,rhel]
+- name: assign ORG from ENV if blank
+  set_fact:
+    subscription_org: "{{ lookup('env', 'SUBSCRIPTION_ORG') }}"
 
-- include: clean.yml
-  when: vms_clean is defined
-  tags: [always,rhel]
+- name: ensure subscription_org is defined
+  run_once: true
+  assert:
+    msg: "Please include extras var of subscription_org or defined ENV[SUBSCRIPTION_ORG]"
+    that:
+      - "subscription_org | trim | length > 0"
 
-- include: certificates.yml
-  tags: [configure,certificates]
+- include_tasks: hostname.yml
+  tags: [ rhel, rhel_hostname ]
 
-- include: subscriptions.yml
-  when: vms_clean is not defined
-  tags: [configure,subscriptions]
+- include_tasks: subscription.yml
+  when: "ansible_distribution == 'RedHat'"
+  tags: [ rhel, rhel_subscription ]
 
-- include: mirrors.yml
-  when: "(vms_clean is not defined) and (subscription_mirror) and (ansible_pkg_mgr) and (ansible_pkg_mgr == 'yum' )"
-  tags: [configure,mirrors]
+- include_tasks: upgrade.yml
+  when: rhel_updates
+  tags: [ rhel, rhel_upgrade ]
 
-- include: upgrade.yml
-  when: vms_clean is not defined and rhel_updates
-  tags: [configure,upgrade]
+- include_tasks: services.yml
+  tags: [ rhel, rhel_services ]
 
-- include: disks.yml
-  when: vms_clean is not defined
-  tags: [configure,disks]
+- include_tasks: dns.yml
+  tags: [ rhel, rhel_dns ]
+
+- include_tasks: storage.yml
+  tags: [ rhel, rhel_storage ]
+
+- include_tasks: test_dns.yml
+  tags: [ rhel, rhel_test ]

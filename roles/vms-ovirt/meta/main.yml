@@ -1,2 +1,5 @@
-# vim: sw=2 ai ts=102
+# vim: sw=2 ai nowrap expandtab
 ---
+dependencies:
+  - role: base-facts
+    skip_setup: true
