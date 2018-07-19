@@ -1,0 +1,55 @@
+Name:           demoapp
+Version:        1.1
+Release:        {{counter}}%{?dist}
+Summary:        Demo Application for Satellite
+
+License:        GPLv3+
+URL:            https://satellite.example.com
+Source0:        %{name}-latest.tar.gz
+
+BuildRequires: make
+BuildArch:     noarch
+      
+Requires: bash
+
+%description 
+Simple demo application
+
+%prep
+%setup -c
+
+# %build
+# echo configure
+# make %{?_smp_mflags}
+
+%install
+export VERSION=%{version}-%{release}
+%make_install
+
+%post
+systemctl daemon-reload || :
+systemctl restart %{name} || :
+systemctl enable %{name} || :
+
+%preun
+if [ $1 = 0 ] ; then
+systemctl stop %{name} || :
+fi
+
+%postun
+if [ $1 = 0 ] ; then
+systemctl daemon-reload || :
+fi
+
+%files
+%{_bindir}/demoapp
+/lib/systemd/system/demoapp.service
+
+%ghost %{_sysconfdir}/sysconfig/demoapp
+
+%doc README
+%license COPYING
+
+%changelog
+* Sun Jul 08 2018 Billy Holmes <gonoph@gmail.com> 1.0-1
+- Initial version of the package

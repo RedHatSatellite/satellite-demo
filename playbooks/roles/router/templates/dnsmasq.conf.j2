@@ -1,0 +1,10 @@
+{% set satellite_server_ip = hostvars[satellite_server].ip | default('eth0:eth0:127.0.01') %}
+{% set satellite_server_ip = (satellite_server_ip.split(',') | first).split(':') | last | ipaddr('address') %}
+{% for intf in vm_cloud_init_nics[1:] %}
+interface={{ intf.ifname }}
+dhcp-range=set:{{ intf.ifname }},{{ intf.ip | ipaddr('subnet') | ipaddr(-56) | ipaddr('address')}},{{ intf.ip | ipaddr('subnet') | ipaddr(-6) | ipaddr('address') }}
+dhcp-boot=tag:{{ intf.ifname }},pxelinux.0,{{ satellite_server }},{{ satellite_server_ip}}
+{% endfor %}
+interface=lo
+bind-interfaces
+conf-dir=/etc/dnsmasq.d

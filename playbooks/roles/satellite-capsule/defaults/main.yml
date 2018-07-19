@@ -1,0 +1,14 @@
+---
+# vim: ts=2 sw=2 expandtab ai
+# defaults file for satellite-capsules
+satellite_capsule_repos:
+  - rhel-7-server-rpms
+  - "rhel-7-server-satellite-capsule-{{ satellite_version }}-rpms"
+  - rhel-server-rhscl-7-rpms
+  - "rhel-7-server-satellite-tools-{{ satellite_tools_version }}-rpms"
+satellite_smartproxy:
+has_ha_smartproxy: "{{ satellite_smartproxy | length > 0 }}"
+satellite_packages:
+  - satellite-capsule
+  - bind-utils
+  - vim

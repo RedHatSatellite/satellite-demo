@@ -1,0 +1,48 @@
+# vim: sw=2 ai nowrap expandtab
+---
+
+- name: assign_facts - init template variables
+  set_fact:
+    ansible_host: "{{ hostname_ip }}"
+    hostname: "{{ hostname }}"
+  vars:
+    ansible_ssh_common_args:
+
+- name: assign_facts - authorized_ssh_keys - look up from local user if needed
+  set_fact:
+    authorized_ssh_keys: "- {{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+  when: |
+    vms_clean is not defined and (authorized_ssh_keys|default("")).strip() == ""
+  run_once: True
+
+- name: assign_facts - network interfaces - if ip is defined, reset nics list
+  set_fact:
+    vm_nics: []
+    vm_cloud_init_nics: []
+
+- name: assign_facts - network interfaces - append nics to arrays
+  set_fact:
+    vm_nics: "{{ vm_nics + [ dict(name=ii[0], profile_name=ii[0], ip=ii[2] ) ] }}"
+    vm_cloud_init_nics: |
+      {{ vm_cloud_init_nics + [
+        dict( 
+          ifname=ii[1],
+          ip=ii[2] | ipaddr('host/prefix'),
+          gw=ii[2] | ipaddr('subnet') | ipaddr(gw | default(1)) | ipaddr('address') )
+          ] }}
+  with_items: "{{ (ip | default('')).split(',') }}"
+  when: item and ii
+  vars:
+    ii: "{{ item.split(':') }}"
+
+- debug:
+    var: dbg_data
+  vars:
+    dbg_data:
+      hostname: "{{ hostname }}"
+      ansible_host: "{{ ansible_host }}"
+      router_server: "{{ router_server }}"
+      router_server_ip: "{{ router_server_ip }}"
+      ansible_ssh_common_args: "{{ ansible_ssh_common_args }}"
+      dns_servers: "{{ dns_servers }}"
+      vm_cloud_init_nics: "{{ vm_cloud_init_nics }}"

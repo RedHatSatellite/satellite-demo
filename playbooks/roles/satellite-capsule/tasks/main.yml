@@ -1,0 +1,55 @@
+---
+# vim: sw=2 ts=2 ai expandtab
+# tasks file for satellite-capsules
+
+# make sure the previous role's handlers were called
+- meta: flush_handlers
+
+# we do this early as some stuff doesn't need to be done if it's already working
+- name: check if satellite-capsule is answering
+  uri:
+    url: "https://{{ inventory_hostname }}:8443/api/organizations"
+    user: "{{ satellite_user }}"
+    password: "{{ satellite_pass }}"
+    force_basic_auth: yes
+  register: satellite_is_installed
+  ignore_errors: yes
+  tags: [ always ]
+  
+- set_fact:
+    satellite_is_installed: "{{ satellite_is_installed.status | default(500) == 200 }}"
+  tags: [ always ]
+
+- include: install_packages.yml
+  tags: [satellite-packages, satellite]
+  when: not satellite_is_installed
+
+- include: network.yml
+  tags: [satellite-networks, satellite]
+
+- include: satellite_install.yml
+  tags: [satellite-install, satellite]
+  when: not satellite_is_installed
+
+- include_role:
+    name: satellite-shared
+    tasks_from: callsatellite.yml
+  vars:
+    call_name: "get capsule IDs"
+    call_api: "/katello/api/capsules?search=name={{ inventory_hostname }}"
+  failed_when: call_output.json.results | length == 0
+  tags: [ always ]
+
+- name: "set capsule id"
+  set_fact:
+    satellite_capsule_id: "{{ call_output.json.results[0].id }}"
+  tags: [ always ]
+
+- include: satellite_environments.yml
+  tags: [satellite-environments, satellite]
+
+- include: satellite_sanity.yml
+  tags: [satellite-sanity, satellite]
+
+- include: satellite_sync.yml
+  tags: [satellite-sync, satellite]

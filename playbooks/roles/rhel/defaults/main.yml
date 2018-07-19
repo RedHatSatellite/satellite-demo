@@ -1,0 +1,11 @@
+# vim: ts=2 sw=2 expandtab ai
+---
+subscription_repos: [ ]
+docker_storage_dev: ''
+
+rhel_install_packages: [ ] 
+
+subscription_org:
+subscription_ak:
+
+subscription_register: true

@@ -1,0 +1,18 @@
+# vim: ts=2 sw=2 expandtab ai
+---
+- name: copy docker-storage-setup template
+  template:
+    src: "docker-storage-setup.j2"
+    dest: "/etc/sysconfig/docker-storage-setup"
+  when: docker_storage_dev | length > 0
+  notify:
+    - stop docker
+    - remove docker-pool
+    - clear docker-storage
+    - remove lib docker
+    - run docker-storage-setup
+    - expand root lv
+    - expand root xfs
+    - start docker
+
+- meta: flush_handlers

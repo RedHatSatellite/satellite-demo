@@ -1,0 +1,8 @@
+# vim: ts=2 sw=2 expandtab ai
+---
+
+- include_tasks: proxy.yml
+  tags: [ dns, dns_proxy ]
+
+- include_tasks: dns.yml
+  tags: [ dns, dns_dns ]

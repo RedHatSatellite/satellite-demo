@@ -1,0 +1,115 @@
+# vim: ts=2 sw=2 expandtab ai
+---
+- name: Bulk Actions
+  any_errors_fatal: true
+  hosts: all
+  gather_facts: false
+  connection: smart
+  vars:
+    bulk: ''
+  tasks:
+    - debug:
+        var: msg
+      run_once: true
+      vars:
+        msg:
+          - "You must define [bulk] action of one of: "
+          - "* demoapp    - install the demoapp on the clients"
+          - "* unregister - unregister all the systems"
+          - "* poweroff   - poweroff all the systems"
+          - "* poseron    - poweroff all the systems"
+      when:
+        - "bulk not in ['demoapp', 'unregister', 'poweroff', 'poweron']"
+
+    - fail:
+      run_once: true
+      when:
+        - "bulk not in ['demoapp', 'unregister', 'poweroff', 'poweron']"
+
+    - name: install demo apps
+      yum:
+        name: demoapp
+        state: latest
+      when:
+        - bulk == 'demoapp'
+        - inventory_hostname in groups.clients
+
+    - name: unregister system
+      redhat_subscription:
+        state: 'absent'
+      register: data
+      when:
+        - bulk == 'unregister'
+
+    - name: stop satellite services
+      ignore_errors: true
+      command: katello-service stop
+      when:
+        - bulk == 'poweroff'
+        - inventory_hostname in (groups.satellites + groups.capsules)
+
+    - name: stop docker services
+      systemd:
+        name: docker
+        state: stopped
+      when:
+        - bulk == 'poweroff'
+        - inventory_hostname in groups.dns
+
+    - name: poweroff host
+      shell: sleep 2 && poweroff &
+      ignore_errors: true
+      when:
+        - bulk == 'poweroff'
+
+    - set_fact:
+        ec2_demo_tag: "{{ tmpvar }}"
+        ec2_region: "{{ tmpvar2 }}"
+      vars:
+        tmpvar: "{{ ec2_demo_tag | default('satellite1') }}"
+        tmpvar2: "{{ ec_region | default('us-east-1') }}"
+      connection: local
+      when:
+        - bulk == 'poweron'
+
+    - import_role:
+        name: vms-ec2
+        tasks_from: aws_check.yml
+      connection: local
+      when:
+        - bulk == 'poweron'
+
+    - import_role:
+        name: vms-ec2
+        tasks_from: vpc_subnet_sg.yml
+      connection: local
+      when:
+        - bulk == 'poweron'
+
+    - name: get instances
+      ec2_instance_facts:
+        aws_access_key: "{{ aws_access_key }}"
+        aws_secret_key: "{{ aws_secret_key }}"
+        region: "{{ ec2_region }}"
+        filters:
+          "instance-state-name": stopped
+          "tag:demo": "{{ ec2_demo_tag }}"
+          "tag:Name": "{{ inventory_hostname }}"
+      register: ec2_instances
+      connection: local
+      when:
+        - bulk == 'poweron'
+
+    - name: start instances
+      ec2:
+        aws_access_key: "{{ aws_access_key }}"
+        aws_secret_key: "{{ aws_secret_key }}"
+        region: "{{ ec2_region }}"
+        instance_ids: "{{ ec2_instance_ids }}"
+        state: running
+      connection: local
+      vars:
+        ec2_instance_ids: "{{ ec2_instances.instances | map(attribute='instance_id') | list }}"
+      when:
+        - bulk == 'poweron'
+        - ec2_instance_ids | length > 0

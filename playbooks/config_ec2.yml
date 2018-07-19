@@ -1,0 +1,21 @@
+# vim: ts=2 sw=2 expandtab ai
+---
+- name: Configure dns server EC2 instances
+  any_errors_fatal: true
+  force_handlers: true
+  hosts: dns
+  gather_facts: true
+  connection: smart
+  roles:
+    - dns
+
+- name: Configure dns client EC2 instances
+  any_errors_fatal: true
+  force_handlers: true
+  hosts: satellites
+  gather_facts: true
+  connection: smart
+  vars:
+    rhel_updates: false
+  roles:
+    - rhel

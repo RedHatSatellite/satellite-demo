@@ -1,0 +1,62 @@
+; vim: filetype=dosini
+[demo-vms:children]
+direct
+
+[direct:children]
+satellites
+capsules
+dns
+clients
+
+[all:vars]
+ansible_user=root
+
+[demo-vms:vars]
+{% set hv = hostvars[groups.satellites | first] %}
+satellite_default_organization={{ hv.satellite_default_organization }}
+satellite_default_location={{ hv.satellite_default_location }}
+
+[demo-vms]
+{% for node in groups['demo'] %}
+{% set hv = hostvars[node] %}
+{{ hv.hostname }} internal_ip={{ hv.internal_ip }} ansible_host={{ hv.public_ip }} subscription_ak={{ hv.subscription_ak }} rhel_updates={{ hv.rhel_updates | default(False)}} hostname={{ hv.hostname }}
+{% endfor %}
+
+[dns:vars]
+{% set hv = hostvars[groups.dns | first] %}
+rhel_extras_repo={{ hv.rhel_extras_repo }}
+docker_storage_dev={{ hv.docker_storage_dev }}
+
+[dns]
+{% for node in groups.dns %}
+{{ hostvars[node].hostname }}
+{% endfor %}
+
+[satellites:vars]
+{% set hv = hostvars[groups.satellites | first] %}
+satellite_version={{ hv.satellite_version }}
+satellite_rhsm_user={{ hv.satellite_rhsm_user }}
+satellite_manifest_file={{ hv.satellite_manifest_file }}
+satellite_enable_tftp={{ hv.satellite_enable_tftp }}
+satellite_enable_discovery={{ hv.satellite_enable_discovery }}
+satellite_subnets={{ hv.satellite_subnets | to_json}}
+
+[satellites]
+{% for node in groups.satellites %}
+{{ hostvars[node].hostname }}
+{% endfor %}
+
+[capsules]
+{% for node in groups.capsules %}
+{% set hv = hostvars[node] %}
+{% set has_sp = 'satellite_smartproxy' in hv and hv.satellite_smartproxy | length > 0 %}
+{{ hv.hostname }} satellite_smartproxy={{ hostvars[hv.satellite_smartproxy].hostname if has_sp else '' }}
+{% endfor %}
+
+[clients]
+{% for node in groups.clients %}
+{% set hv = hostvars[node] %}
+{% set ss = hv.satellite_server | default(groups.satellites | first) %}
+{% set satellite_server_hostname = hostvars[ss].hostname %}
+{{ hv.hostname }} satellite_server_hostname='{{ satellite_server_hostname }}' satellite_url='{{ hv.satellite_url | default('') }}'
+{% endfor %}

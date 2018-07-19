@@ -1,6 +1,12 @@
+.flag-*
 secret.yml
 vault.yml
 *.retry
 *.pyc
 *~
 Docker/Dockerfile
+playbooks/inventory/demo.satellite
+bootstrap/aws
+bootstrap/Dockerfile
+bootstrap/files/etc/motd
+manifest.zip

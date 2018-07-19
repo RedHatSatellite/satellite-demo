@@ -1,0 +1,36 @@
+# vim: sw=2 ai ts=102
+---
+
+- block:
+  - name: get vm facts
+    ovirt_vms_facts:
+      auth: "{{ ovirt_auth }}"
+      pattern: "name={{ vm_name }} and cluster={{ vm_cluster }}"
+      fetch_nested: true
+
+  - name: set primary disk id
+    set_fact:
+      vm_primary_disk_id: "{{ ovirt_vms[0].disk_attachments[0].id[0] }}"
+
+  - name: increase size of primary disk
+    ovirt_disk:
+      auth: "{{ ovirt_auth }}"
+      vm_name: "{{ vm_name }}"
+      id: "{{ vm_primary_disk_id }}"
+      size: "{{ vm_primary_disk_size }}GiB"
+      state: present
+
+  when: vm_primary_disk_size > 10
+
+- name: "Attach disks"
+  ovirt_disk:
+    auth: "{{ ovirt_auth }}"
+    vm_name: "{{ vm_name }}"
+    format: cow
+    interface: virtio
+    state: attached
+    bootable: false
+    name: "{{ inventory_hostname }}_{{ item.name }}"
+    size: "{{ item.size }}"
+    storage_domain: "{{ item.storage_domain }}"
+  with_items: "{{ vm_extra_disks }}"

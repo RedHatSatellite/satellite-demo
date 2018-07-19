@@ -1,0 +1,13 @@
+[Unit]
+Description=Demo Application
+Requires=network.target
+
+[Service]
+EnvironmentFile=-/etc/sysconfig/demoapp
+ExecStart=/bin/demoapp
+SyslogIdentifier=demoapp
+Restart=always
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

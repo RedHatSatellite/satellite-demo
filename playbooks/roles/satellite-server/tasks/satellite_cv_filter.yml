@@ -1,0 +1,25 @@
+---
+# vim: sw=2 ts=102 ai
+- include_tasks: satellite_helper_filter.yml
+  vars:
+    - months_ago: "4"
+    - environments: "{{ satellite_hammer_environments | map(attribute='name') | list }}"
+  when: satellite_hammer_configure_CV_filters
+
+- include_tasks: satellite_helper_filter.yml
+  vars: 
+    - months_ago: "3"
+    - environments: "{{ (satellite_hammer_environments | map(attribute='name') | list)[0:-1] }}"
+  when: satellite_hammer_configure_CV_filters
+
+- include_tasks: satellite_helper_filter.yml
+  vars: 
+    - months_ago: "2"
+    - environments: "{{ (satellite_hammer_environments | map(attribute='name') | list)[0:-2] }}"
+  when: satellite_hammer_configure_CV_filters
+
+- include_tasks: satellite_helper_filter.yml
+  vars: 
+    - months_ago: "1"
+    - environments: "{{ (satellite_hammer_environments | map(attribute='name') | list)[0:-3] }}"
+  when: satellite_hammer_configure_CV_filters

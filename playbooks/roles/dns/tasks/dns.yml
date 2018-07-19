@@ -1,0 +1,41 @@
+# vim: ts=2 sw=2 expandtab ai
+---
+
+- name: copy dnsmasq config file
+  template:
+    src: templates/dnsmasq.conf.j2
+    dest: /etc/dnsmasq.conf
+  notify:
+    - restart dnsmasq
+
+- name: copy local resolv to dnsmasq resolv
+  copy:
+    src: /etc/resolv.conf.bak
+    dest: /etc/dnsmasq.resolv
+    remote_src: true
+    backup: true
+  notify: restart network
+
+- name: ensure hosts file has fqdn
+  blockinfile:
+    path: /etc/hosts
+    block: |
+      {% for hn in groups.all %}
+      {% if hn in groups.dns %}
+      {{ hostvars[hn].internal_ip }}  {{ hn }}
+      {% else %}
+      {{ hostvars[hn].internal_ip }}  {{ hn }}
+      {% endif %}
+      {% endfor %}
+  notify:
+    - refresh facts
+    - restart dnsmasq
+
+- meta: flush_handlers
+
+- name: ensure dnsmasq has started
+  systemd:
+    name: dnsmasq
+    daemon_reload: true
+    enabled: true
+    state: started

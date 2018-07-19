@@ -1,0 +1,85 @@
+# vim: ts=2 sw=2 expandtab ai
+---
+- name: "Provisioning | get Activation Keys"
+  command: "/usr/bin/hammer --output json activation-key list {{ ORG_ID }}"
+  changed_when: false
+  register: hammer_output
+
+- name: "Provisioning | convert output to json"
+  set_fact:
+    hammer_output: "{{ hammer_output.stdout | from_json }}"
+
+- name: "Provisioning | Check if AKs have been created"
+  set_fact:
+    ti: dummy
+  register: tmp
+  when: item.ak
+  changed_when: |
+    item.ak not in hammer_output | map(attribute='Name')
+  with_items: "{{ satellite_hammer_views }}"
+  loop_control:
+    label: "AK={{ item.ak }}"
+
+- name: "Provisioning | Create AK if needed"
+  command: "/usr/bin/hammer activation-key create {{ ORG_ID }} --name={{item.item.ak}} --content-view='{{item.item.name}}' --lifecycle-environment=Library --unlimited-hosts"
+  when: item.changed
+  with_items: "{{ tmp.results }}"
+  loop_control:
+    label: "/usr/bin/hammer activation-key create {{ ORG_ID }} --name={{item.item.ak}} --content-view='{{item.item.name}}' --lifecycle-environment=Library --unlimited-hosts"
+
+###
+# AK attaching subscriptions
+###
+- include: satellite_helper_callsatellite.yml
+  vars:
+    call_name: lookup activation keys
+    call_api: "/katello/api/organizations/{{ org_id }}/activation_keys"
+    call_var: call_ak
+
+- include: satellite_helper_callsatellite.yml
+  vars:
+    call_name: lookup subscription information
+    call_api: "/katello/api/organizations/{{ org_id }}/subscriptions"
+    call_var: call_subs
+
+- name: "API | Calling Satellite for {{ call_name }}"
+  uri:
+    url: "{{ satellite_url }}{{ call_api }}"
+    user: "{{ satellite_user }}"
+    password: "{{ satellite_pass }}"
+    force_basic_auth: yes
+    validate_certs: false
+    headers:
+      Accept: "application/json,version=2"
+  delegate_to: "{{ satellite_api_delegate }}"
+  register: call_sub_ak
+  with_items: "{{ call_ak.json.results }}"
+  vars:
+    call_name: lookup AK subscriptions
+    call_api: "/katello/api/activation_keys/{{ item.id }}/subscriptions"
+  loop_control:
+    label: "{{ item.name }}"
+
+- satellite_ak_subscription:
+    satellite_hammer_views: "{{ satellite_hammer_views }}"
+    api_activation_keys: "{{ call_ak }}"
+    api_subscriptions: "{{ call_subs }}"
+    api_activation_keys_subscriptions: "{{ call_sub_ak }}"
+
+- name: "Provisioning | assigning subscriptions to AKs"
+  command: "/usr/bin/hammer activation-key add-subscription --id='{{ item.value.id }}' --subscription-id={{ item.value.to_add[0] }}"
+  when: item.value.to_add
+  with_dict: "{{ satellite_ak_subscription }}"
+  loop_control:
+    label: "{{ item.key }} adding {{ item.value.to_add }}"
+
+- name: "Provisioning | overriding certain repos for AKs"
+  command: "/usr/bin/hammer activation-key content-override --name='{{item.0.ak}}' --value=1 {{ ORG_ID }} --content-label='{{item.1}}'"
+  changed_when: false
+  with_subelements:
+    - "{{ satellite_hammer_views }}"
+    - override
+  loop_control:
+    label: "/usr/bin/hammer activation-key content-override --name='{{item.0.ak}}' --value=1 {{ ORG_ID }} --content-label='{{item.1}}'"
+
+

@@ -1,0 +1,6 @@
+# vim: ts=2 sw=2 expandtab ai
+---
+haproxy_image: docker.io/haproxy:1.7.9
+haproxy_container_name: haproxy
+dns_ignore_domains:
+  - example.com

@@ -1,0 +1,35 @@
+---
+# vim: ts=2 sw=2 expandtab ai
+# tasks file for satellite-client
+
+- include_role:
+    name: satellite-shared
+    tasks_from: callsatellite.yml
+  vars:
+    call_name: "check that this host is"
+    call_api: "/api/hosts?search=organization_id={{ org_id }}&search=name={{ inventory_hostname }}"
+
+- name: save host id
+  set_fact:
+    satellite_host_id: "{{ (call_output.json.results | default([]) | first | default({})).id | default(0) }}"
+
+- include_role:
+    name: satellite-shared
+    tasks_from: callsatellite.yml
+  vars:
+    call_name: "get host subscription information"
+    call_api: "/api/hosts/{{ satellite_host_id }}/subscriptions"
+    call_ignore_errors: true
+    call_when: "{{ satellite_host_id | int > 0 }}"
+
+- name: check host is subscribed
+  set_fact:
+    is_subscribed: "{{ satellite_host_id > 0 and call_output.json.results | default([]) | length > 0 }}"
+
+- include: subscriptions_bootstrap.yml
+  when:
+    - not is_subscribed
+
+- name: ensure satellite client repos are enabled
+  subscription_repos:
+    repos: "{{ satellite_client_repos }}"

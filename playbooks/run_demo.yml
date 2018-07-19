@@ -1,0 +1,23 @@
+# vim: ts=2 sw=2 expandtab ai
+---
+
+- name: Satellite Demo Script
+  any_errors_fatal: false
+  force_handlers: true
+  hosts: satellites
+  gather_facts: false
+  connection: smart
+
+  roles:
+    - demo-script
+
+  tasks:
+    - debug:
+        var: msg
+      vars:
+        msg:
+          satellite: "https://{{ groups.satellites | first }}"
+          satellite_ip: "https://{{ groups.satellites | map('extract', hostvars, 'ansible_host') | first }}"
+          demo: "http://{{ groups.dns | first }}:8080"
+          demo_ip: "http://{{ groups.dns | map('extract', hostvars, 'ansible_host') | first }}:8080"
+      tags: [ info ]

@@ -1,0 +1,17 @@
+# vim: ts=2 sw=2 expandtab ai
+---
+default_ec2_drive_map:
+  - /dev/sda1
+  - /dev/xvdb
+
+default_ec2_volumes:
+  - delete_on_termination: true
+    device_name: '{{ ec2_drive_map.0 }}'
+    volume_size: "{{ ec2_volume_sizes.0 }}"
+    volume_type: gp2
+  - delete_on_termination: true
+    device_name: '{{ ec2_drive_map.1 }}'
+    volume_size: "{{ ec2_volume_sizes.1 }}"
+    volume_type: gp2
+
+default_ec2_volume_sizes: [ 10, 20 ]

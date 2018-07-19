@@ -1,0 +1,24 @@
+---
+# vim: sw=2 ai expandtab
+
+- name: "Facts | set satellite url"
+  set_fact:
+    satellite_url: "https://{{ satellite_server_hostname }}"
+  when: "satellite_url | default('') | length == 0"
+
+- include: callsatellite.yml
+  vars:
+      call_name: organization id
+      call_api: "/api/organizations?search=name={{ satellite_default_organization | urlencode() }}"
+      call_var: ti
+
+- include: callsatellite.yml
+  vars:
+      call_name: location id
+      call_api: "/api/locations?search=name={{ satellite_default_location | urlencode() }}"
+      call_var: to
+
+- name: "Fact | set organization and location id"
+  set_fact:
+    org_id: "{{ (ti.json.results | first).id }}"
+    loc_id: "{{ (to.json.results | first).id }}"

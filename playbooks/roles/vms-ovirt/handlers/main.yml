@@ -1,0 +1,11 @@
+# vim: sw=2 ai ts=2 expandtab
+---
+- debug:
+    var: dbg_data
+  listen: waiting for server start
+  vars:
+    dbg_data:
+      delegate_to: "{{ delegate_ip }}"
+      remote_user: "{{ ansible_user }}"
+      host: "{{ vm_cloud_init_nics.0.ip | ipaddr('address') }}"
+  tags: [ always ]

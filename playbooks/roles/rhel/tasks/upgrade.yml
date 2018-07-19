@@ -1,0 +1,51 @@
+# vim: sw=2 ai ts=102
+---
+
+- name: perform upgrade with yum
+  yum:
+    name: '*'
+    state: latest
+  when: ansible_pkg_mgr == 'yum'
+  async: 1200
+  poll: 0
+  register: yum_upgrade
+  changed_when: false
+
+- name: check for atomic host
+  stat:
+    path: /run/ostree-booted
+  register: atomic_test
+  when: yum_upgrade.skipped | default(False)
+
+- name: perform upgrade with atomic
+  atomic_host:
+    revision: latest
+  when: yum_upgrade.skipped | default(False) and atomic_test.stat.exists | default(False)
+  register: atomic_upgrade
+  changed_when: |
+    atomic_upgrade.changed and "No upgrade available." not in atomic_upgrade.msg
+  notify: reboot host
+
+- name: wait on yum upgrades
+  async_status:
+    jid: "{{ yum_upgrade.ansible_job_id }}"
+  register: job_result
+  when: not yum_upgrade.skipped | default(False)
+  until: job_result.finished
+  retries: 120
+
+- name: rewrite yum_upgrade variable
+  set_fact:
+    yum_upgrade:
+      ansible_job_id: "{{ yum_upgrade.ansible_job_id | default(0) }}"
+      changed: "{{ job_result.changed }}"
+      finished: "{{ job_result.finished | default(0) }}"
+      results_file: "{{ yum_upgrade.results_file | default('') }}"
+      started: "{{ yum_upgrade.started | default(0) }}"
+      skipped: "{{ yum_upgrade.skipped | default(False) }}"
+
+- name: ensure system reboots if updates
+  command: /usr/bin/true
+  connection: local
+  when: yum_upgrade.changed or atomic_upgrade.changed
+  notify: reboot host

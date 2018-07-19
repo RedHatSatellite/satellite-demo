@@ -1,0 +1,67 @@
+# vim: sw=2 ai ts=2 expandtab
+---
+
+- name: fix booleans
+  set_fact:
+    use_cloud_init: "{{ use_cloud_init | bool }}"
+    vm_clone: "{{ vm_clone | bool }}"
+
+- name: assign_facts - cloud_init - create if needed
+  set_fact:
+    vm_cloud_init: |
+      {
+        "host_name": "{{ inventory_hostname if domain_name is not defined else inventory_hostname + '.' + domain_name }}",
+        "user_name": "{{ ansible_user }}",
+        "root_password": "{{ pw }}",
+        {% if vm_cloud_init_nics %}
+        "nic_ip_address": "{{ vm_cloud_init_nics.0.ip | ipaddr('address') }}",
+        "nic_netmask": "{{ vm_cloud_init_nics.0.ip | ipaddr('netmask') }}",
+        "nic_gateway": "{{ vm_cloud_init_nics.0.gw }}",
+        "nic_name": "{{ vm_cloud_init_nics.0.ifname }}",
+        "nic_on_boot": true,
+        "nic_boot_protocol": "static",
+        {% endif %}
+        {% if dns_servers | default('') %}
+        "dns_servers": "{{ dns_servers }}",
+        {% endif %}
+        {% if dns_search | default('') %}
+        "dns_search": "{{ dns_search }}",
+        {% endif %}
+        "regenerate_ssh_keys": true,
+        "authorized_ssh_keys": "{{ authorized_ssh_keys }}",
+      }
+  when: use_cloud_init and vm_cloud_init_nics is defined and vm_cloud_init_nics
+  vars:
+    pw: "{{ user_password if user_password | default('')  else ( 'redhat123 ' + range(500,1000)|random|string) | hash( 'sha1') }}"
+
+- name: assign_facts - cloud_init - create run_cmd
+  set_fact:
+    vm_cloud_init_runcmd:
+      custom_script: |
+        runcmd:
+          - hostnamectl set-hostname "{{ hostname }}"
+          - useradd demo
+          - passwd demo --stdin <<< "{{ vm_cloud_init.root_password }}"
+          - nmcli c modify "System eth0" connection.id eth0
+        {% if dns_servers | default('') and dns_search | default('') %}
+          - nmcli c modify eth0 ipv4.dns "{{ dns_servers }}" ipv4.dns-search "{{ dns_search }}"
+        {% endif %}
+        {% if vm_cloud_init_nics is defined and vm_cloud_init_nics.0 is defined and vm_cloud_init_nics.0.gw is defined %}
+          - nmcli c modify eth0 ipv4.gateway "{{ vm_cloud_init_nics.0.gw }}"
+        {% endif %}
+          - ifdown eth0
+          - ifup eth0
+          - systemctl restart NetworkManager
+          - touch /etc/cloud/cloud-init.disabled
+          - echo c2VkIC1pICIvXmRhdGFzb3VyY2VfbGlzdDogL2QiIC9ldGMvY2xvdWQvY2xvdWQuY2ZnIDsgZWNobyAnZGF0YXNvdXJjZV9saXN0OiBbIk5vQ2xvdWQiLCAiQ29uZmlnRHJpdmUiXScgPj4gL2V0Yy9jbG91ZC9jbG91ZC5jZmcK | base64 -d | sh
+          - echo "Updated with Cloud-Init" >> /etc/issue
+          - sync
+  when: use_cloud_init and vm_cloud_init and vm_cloud_init.root_password is defined
+
+- debug: 
+    var: vm_cloud_init_runcmd
+
+- name: assign_facts - cloud_init - assign run_cmd to cloud_init if needed
+  set_fact:
+    vm_cloud_init: "{{ vm_cloud_init | combine(vm_cloud_init_runcmd) }}"
+  when: use_cloud_init and vm_cloud_init and vm_cloud_init.root_password is defined

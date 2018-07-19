@@ -1,0 +1,60 @@
+# vim: ts=2 sw=2 expandtab ai
+---
+- name: Test that sudo is on
+  any_errors_fatal: true
+  hosts: ec2
+  gather_facts: false
+  connection: local
+  tasks:
+    - name: check that sudo is working
+      become: true
+      command: id
+      run_once: true
+      changed_when: false
+
+- name: Get EC2 instances
+  hosts: ec2
+  gather_facts: false
+  connection: local
+  tags: [ always ]
+  roles: 
+  - vms-ec2
+
+- name: Unregister systems
+  hosts: all
+  gather_facts: false
+  become: true
+  tasks:
+  - name: unregister system
+    ignore_errors: true
+    redhat_subscription:
+      state: 'absent'
+    when: ansible_host | default(False)
+    tags: [ rhel ]
+
+- name: Remove EC2 instances
+  hosts: ec2
+  gather_facts: false
+  connection: local
+  vars:
+    ec2_destroy: true
+
+  roles:
+    - vms-ec2
+
+  tasks:
+  - meta: clear_host_errors
+    tags: [ always ]
+  - meta: refresh_inventory
+    tags: [ always ]
+
+- name: Final Cleanup
+  any_errors_fatal: true
+  force_handlers: true
+  hosts: all
+  gather_facts: false
+  connection: local
+  vars:
+    sshconfig_clean: true
+  tags: [ always ]
+  roles: [ localconfig ]

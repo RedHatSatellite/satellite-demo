@@ -1,0 +1,63 @@
+#---
+# vim: sw=4 ai expandtab
+global
+    log         /dev/log	local0
+
+    chroot      /tmp
+    pidfile     /haproxy.pid
+    maxconn     4000
+    user        daemon
+    group       daemon
+    daemon
+    tune.ssl.default-dh-param 2048
+
+    # turn on stats unix socket
+    stats socket /tmp/stats
+
+defaults
+    log                     global
+    option                  redispatch
+    option                  dontlognull
+    retries                 3
+    timeout http-request    60s
+    timeout queue           2m
+    timeout connect         10s
+    timeout client          2m
+    timeout server          2m
+    timeout http-keep-alive 60s
+    timeout check           20s
+    maxconn                 1000
+    option log-health-checks
+
+{% set hv_first_capsule = hostvars[groups.capsules | first] %}
+{% set ports = [] %}
+{% set ports = ports + [ dict(name='http',     ports=[80,80],     lb='roundrobin', nodes=groups.capsules, mode='tcp') ] %}
+{% set ports = ports + [ dict(name='demoapp',  ports=[8080,8080], lb='roundrobin', nodes=groups.clients, mode='http') ] %}
+{% if hv_first_capsule.satellite_smartproxy | default('') | length > 0 %}
+{% set ports = ports + [ dict(name='anaconda', ports=[8000,8000], lb='roundrobin', nodes=groups.capsules, mode='tcp') ] %}
+{% set ports = ports + [ dict(name='https',    ports=[443,443],   lb='source',     nodes=groups.capsules, mode='tcp') ] %}
+{% set ports = ports + [ dict(name='rhsm',     ports=[8443,8443], lb='roundrobin', nodes=groups.capsules, mode='tcp') ] %}
+{% set ports = ports + [ dict(name='amqp',     ports=[5647,5647], lb='roundrobin', nodes=groups.capsules, mode='tcp') ] %}
+{% set ports = ports + [ dict(name='puppet',   ports=[8140,8140], lb='roundrobin', nodes=groups.capsules, mode='tcp') ] %}
+{% set ports = ports + [ dict(name='puppetca', ports=[8141,8140], lb='roundrobin', nodes=groups.capsules[0:1], mode='tcp') ] %}
+{% set ports = ports + [ dict(name='sproxy',   ports=[9090,9090], lb='roundrobin', nodes=groups.capsules, mode='tcp') ] %}
+{% set ports = ports + [ dict(name='docker',   ports=[5000,5000], lb='roundrobin', nodes=groups.capsules, mode='tcp') ] %}
+{% endif %}
+{% for port in ports %}
+
+listen lb_{{ port.name }}
+    bind                *:{{ port.ports[0] }}
+    mode                {{ port.mode }}
+    option              {{ port.mode }}log
+{% if port.mode == 'tcp' %}
+    option              tcp-check
+{% endif %}
+{% if port.mode == 'http' %}
+    option               httpchk
+{% endif %}
+
+    balance             {{ port.lb }}
+{% for hn in port.nodes %}
+    server {{ hn.split('.') | first }}  {{ hostvars[hn].internal_ip }}:{{ port.ports[1] }} check
+{% endfor %}
+{% endfor %}

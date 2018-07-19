@@ -1,0 +1,22 @@
+---
+# vim: ts=2 sw=2 expandtab ai
+
+demo_counter_file: ~/demo_counter
+demo_default_counter:
+  counter: 0
+demo_build_dir: ~/demoapp_build
+
+demo_product: Demo
+demo_repository: Demo
+
+demo_repos:
+  - rhel-7-server-rpms
+  - Gonoph_Demo_Demo
+  - rhel-7-server-extras-rpms
+  - rhel-7-server-satellite-tools-6.3-rpms
+
+demo_step2_packages:
+  - hdparm
+
+demo_step3_packages:
+  - sshpass

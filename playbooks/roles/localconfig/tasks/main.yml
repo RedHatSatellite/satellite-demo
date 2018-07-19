@@ -1,0 +1,44 @@
+# vim: ts=2 sw=2 expandtab ai
+---
+
+- set_fact:
+    storage_devices: "{{ storage_devices | default([]) }}"
+    sshconfig_clean: "{{ sshconfig_clean | default(False) | bool }}"
+    local_custom_certificates: "{{ local_custom_certificates | bool }}"
+  tags: [ always ]
+
+- include_tasks: config_ssh.yml
+  tags: [ localconfig, local_ssh ]
+
+- include_tasks: local_hosts.yml
+  tags: [ localconfig, local_hosts ]
+
+- name: including easy_rsa tasks
+  include_tasks: easy_rsa.yml
+  tags: [ localconfig, local_ca ]
+  run_once: true
+  when:
+    - local_custom_certificates
+    - not sshconfig_clean
+
+- include_tasks: copy_ca_certs.yml
+  tags: [ localconfig, local_copy_ca ]
+  when:
+    - local_custom_certificates
+    - not sshconfig_clean
+
+- include_tasks: make_inventory.yml
+  tags: [ localconfig, local_inventory ]
+
+- name: Wait for SSH to come up
+  wait_for:
+    host: "{{ ansible_host }}"
+    port: 22
+    delay: 15
+    state: started
+  when:
+    - not sshconfig_clean
+
+- include_tasks: root_login.yml
+  when: not sshconfig_clean
+  tags: [ localconfig, local_root ]

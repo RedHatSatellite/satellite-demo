@@ -1,0 +1,36 @@
+# vim: ts=2 sw=2 expandtab ai
+---
+
+- name: assign ORG from ENV if blank
+  set_fact:
+    subscription_org: "{{ lookup('env', 'SUBSCRIPTION_ORG') }}"
+
+- name: ensure subscription_org is defined
+  run_once: true
+  assert:
+    msg: "Please include extras var of subscription_org or defined ENV[SUBSCRIPTION_ORG]"
+    that:
+      - "subscription_org | trim | length > 0"
+
+- include_tasks: hostname.yml
+  tags: [ rhel, rhel_hostname ]
+
+- include_tasks: subscription.yml
+  when: "ansible_distribution == 'RedHat'"
+  tags: [ rhel, rhel_subscription ]
+
+- include_tasks: upgrade.yml
+  when: rhel_updates
+  tags: [ rhel, rhel_upgrade ]
+
+- include_tasks: services.yml
+  tags: [ rhel, rhel_services ]
+
+- include_tasks: dns.yml
+  tags: [ rhel, rhel_dns ]
+
+- include_tasks: storage.yml
+  tags: [ rhel, rhel_storage ]
+
+- include_tasks: test_dns.yml
+  tags: [ rhel, rhel_test ]

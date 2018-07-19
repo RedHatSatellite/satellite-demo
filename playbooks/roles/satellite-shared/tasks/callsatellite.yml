@@ -1,0 +1,28 @@
+---
+# vim: sw=2 ai expandtab
+
+# - debug:
+#     var: call_vars
+#   vars:
+#     call_vars:
+#       call_name: "{{ call_name }}"
+#       call_api: "{{ call_api }}"
+#       satellite_user: "{{ satellite_user }}"
+#       call_when: "{{ call_when | default(omit) }}"
+#       satellite_api_delegate: "{{ satellite_api_delegate }}"
+#       call_var: "{{ call_var | default('call_output') }}"
+#       call_ignore_errors: "{{ call_ignore_errors | default(False) }}"
+
+- name: "API | Calling Satellite for {{ call_name }}"
+  uri:
+    url: "{{ satellite_url }}{{ call_api }}"
+    user: "{{ satellite_user }}"
+    password: "{{ satellite_pass }}"
+    force_basic_auth: yes
+    validate_certs: false
+    headers:
+      Accept: "application/json,version=2"
+  when: "call_when | default(omit)"
+  delegate_to: "{{ satellite_api_delegate }}"
+  register: "{{ call_var | default('call_output') }}"
+  ignore_errors: "{{ call_ignore_errors | default(omit) }}"

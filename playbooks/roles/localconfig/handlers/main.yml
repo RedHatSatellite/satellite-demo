@@ -1,0 +1,7 @@
+# vim: ts=2 sw=2 expandtab ai
+---
+- name: updated ca
+  become: true
+  command: update-ca-trust
+  changed_when: false
+  tags: [ always ]

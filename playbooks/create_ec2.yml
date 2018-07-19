@@ -1,0 +1,28 @@
+# vim: ts=2 sw=2 expandtab ai
+---
+- name: Test that sudo is on
+  any_errors_fatal: true
+  hosts: ec2
+  gather_facts: false
+  connection: local
+  tasks:
+    - name: check that sudo is working
+      become: true
+      command: id
+      run_once: true
+      changed_when: false
+
+- name: Create EC2 instances
+  any_errors_fatal: true
+  force_handlers: true
+  hosts: ec2
+  gather_facts: false
+  connection: local
+  vars:
+    ec2_create: True
+  roles:
+    - vms-ec2
+  tasks:
+    - include_role:
+       name: localconfig
+      when: localconfig == True

@@ -1,0 +1,12 @@
+# vim: sw=2 ai ts=102
+---
+- name: Removing VM
+  ovirt_vms:
+    auth: "{{ ovirt_auth }}"
+    name: "{{ vm_name }}"
+    cluster: "{{ vm_cluster }}"
+    state: absent
+  register: ovirt_vms
+  changed_when: ovirt_vms.changed | default(false) or (ovirt_vms.failed | default(false) and ovirt_vms.msg == 'HTTP response code is 404.')
+  failed_when: ovirt_vms.failed | default(false) and ovirt_vms.msg != 'HTTP response code is 404.'
+  tags: [ovirt]

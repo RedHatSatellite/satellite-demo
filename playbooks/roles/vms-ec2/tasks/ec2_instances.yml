@@ -1,0 +1,58 @@
+# vim: ts=2 sw=2 expandtab ai
+---
+- name: create instances
+  when: ec2_create
+  ec2:
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    region: "{{ ec2_region }}"
+    key_name: "{{ ec2_keypair }}"
+    group: "{{ ec2_security_group_name }}"
+    instance_type: "{{ ec2_instance_type }}"
+    image: "{{ ec2_ami_image }}"
+    wait: "{{ ec2_wait > 0 }}"
+    wait_timeout: "{{ ec2_wait if ec2_wait > 0 else 1 }}"
+    exact_count: 1
+    instance_tags: "{{ ec2_tags }}"
+    count_tag: "{{ ec2_tags }}"
+    vpc_subnet_id: "{{ ec2_vpc_subnet }}"
+    assign_public_ip: "{{ ec2_public_ip }}"
+    volumes: "{{ ec2_volumes }}"
+    private_ip: "{{ private_ip | default(omit) }}"
+  notify: Wait for SSH to come up
+
+- name: get instances
+  ec2_instance_facts:
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    region: "{{ ec2_region }}"
+    filters:
+      "instance-state-name": running
+      "tag:demo": "{{ ec2_demo_tag }}"
+      "tag:Name": "{{ inventory_hostname }}"
+  register: ec2_instances
+
+- set_fact:
+    ansible_host: "{{ ( ec2_instances.instances | first | default({}) ).public_ip_address | default('')}}"
+    public_ip: "{{ ( ec2_instances.instances | first | default({}) ).public_ip_address | default('')}}"
+    internal_ip: "{{ ( ec2_instances.instances | first | default({}) ).private_ip_address | default('')}}"
+    ec2_instance_ids: "{{ ec2_instances | json_query('instances[].instance_id') }}"
+
+- debug:
+    var: ec2_facts
+  vars:
+    ec2_facts:
+      hostname: "{{ hostname }}"
+      internal_ip: "{{ internal_ip }}"
+      ansible_host: "{{ ansible_host }}"
+      ec2_instance_ids: "{{ ec2_instance_ids }}"
+      ansible_user: "{{ ansible_user }}"
+
+- name: destroy instances
+  when: ec2_destroy and ec2_instance_ids | default(False)
+  ec2:
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    region: "{{ ec2_region }}"
+    instance_ids: "{{ ec2_instance_ids }}"
+    state: absent

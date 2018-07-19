@@ -1,0 +1,29 @@
+# vim: sw=2 ai nowrap expandtab
+---
+skip_setup: false
+configured_c93fca421c233d1529ad859ac1adff81: false
+default_vnic_profile: rhevm
+default_vnic_name: eth0
+domain_name:
+hostname: "{{ ( [inventory_hostname, domain_name] if domain_name is defined else [inventory_hostname] ) | list | join('.') }}"
+ip: "{{ [ default_vnic_profile , default_vnic_name , lookup('gethostbyname', hostname) ].join(':') }}"
+gw: 1
+hostname_ip: "{{ (ip.split(',') | first).split(':')[2] | ipaddr('address') }}"
+router_server: "{{ groups.routers | default([]) | first | default(none) }}"
+router_server_ip: "\
+  {% if not router_server %}\
+  localhost\
+  {% else %}\
+  {% set hv = hostvars[router_server] %}\
+  {% set ip = hv.ip | default(none) %}\
+  {% if not ip %}\
+  {% set hn = [ router_server, hv.domain_name | default(domain_name) ] | list | join('.') %}\
+  {% set ip = lookup('gethostbyname', hn) %}\
+  {% endif %}\
+  {{ (ip.split(',') | first).split(':') | last | ipaddr('address') }}\
+  {% endif %}"
+delegate_ip: "{{ router_server_ip if inventory_hostname in groups.proxied else 'localhost' }}"
+ansible_ssh_common_args: >-
+  {% if delegate_ip != 'localhost' %}
+  -o 'ProxyCommand=ssh -W %h:%p -q {{ ansible_user }}@{{ delegate_ip }}'
+  {% endif %}

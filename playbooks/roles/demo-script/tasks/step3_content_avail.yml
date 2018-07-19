@@ -1,0 +1,35 @@
+# vim: ts=2 sw=2 expandtab ai
+---
+
+- name: test demo packages can be installed and cleaned
+  delegate_to: "{{ item.0}}"
+  yum:
+    name: "{{ demo_step3_packages }}"
+    state: "{{ item.1 }}"
+  with_nested:
+    - "{{ groups.clients }}"
+    - 
+      - absent
+      - latest
+      - absent
+
+- name: shutdown master satellite
+  command: katello-service stop
+
+- name: "install demo packages on clients [client2 fails]"
+  delegate_to: "{{ item }}"
+  yum:
+    name: "{{ demo_step3_packages }}"
+    state: latest
+  with_items: "{{ groups.clients }}"
+  ignore_errors: yes
+
+- name: start up master satellite
+  command: katello-service start
+
+- name: ensure demo packages are uninstalled on clients
+  delegate_to: "{{ item }}"
+  yum:
+    name: "{{ demo_step3_packages }}"
+    state: absent
+  with_items: "{{ groups.clients }}"

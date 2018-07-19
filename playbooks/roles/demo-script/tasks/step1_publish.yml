@@ -1,0 +1,41 @@
+# vim: ts=2 sw=2 expandtab ai
+---
+
+- name: "add demo user so we can build the rpm"
+  user:
+    name: demo
+    comment: Demo User
+
+- name: "calculate rpm filename"
+  become: true
+  become_user: demo
+  command: "rpmspec -q --rpms {{ demo_build_dir }}/demoapp.spec"
+  register: rpmspec
+
+- name: "find new rpm on filesystem"
+  become: true
+  become_user: demo
+  shell: "find ~/rpmbuild -type f -name '{{ rpmspec.stdout_lines | first }}.rpm'"
+  register: rpmspec
+  failed_when: "rpmspec.rc > 0 or rpmspec.stdout_lines | length == 0"
+
+- name: "upload the rpm and publish the demo content views"
+  command: "hammer {{ item }}"
+  with_items:
+    - "repository upload-content --name Demo --organization-id 1 --product Demo --path={{ rpm }}"
+    - "content-view publish --organization-id 1 --name Demo_App --description 'imported new version {{ rpm | basename }}'"
+    - "content-view publish --organization-id 1 --name Demo_Comp --description 'imported new version {{ rpm | basename }}'"
+  vars:
+    rpm: "{{ rpmspec.stdout_lines | first }}"
+
+- name: wait a few seconds for capsules to start sync
+  pause:
+    seconds: 10
+
+- name: Wait for capsule sync tasks to complete
+  connection: local
+  check_capsules:
+  register: capsules
+  until: "capsules.results | map(attribute='active') | map('length') | flatten | sum == 0"
+  delay: 10
+  retries: 10

@@ -1,0 +1,69 @@
+---
+# vim: sw=2 ts=102 ai
+
+# Create a normal content view and one for the kickstart as the kickstart never changes
+# this is needed for the capsule later on
+- include: satellite_helper_callsatellite.yml
+  vars:
+    call_name: all content-views
+    call_api: "/katello/api/organizations/{{ org_id }}/content_views"
+
+- name: check if view is there
+  set_fact:
+    ti: dummy
+  changed_when: |
+    item not in (call_output.json.results | map(attribute='name') | list)
+  register: to
+  with_items: "{{ satellite_hammer_views | map(attribute='name') | list}}"
+
+- name: Creating views
+  command: "/usr/bin/hammer content-view create {{ ORG_ID }} --name='{{item.item}}'"
+  when: item.changed
+  with_items: "{{ to.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- include: satellite_helper_repo_ids.yml
+
+- include: satellite_helper_callsatellite.yml
+  vars:
+    call_name: grab all content views
+    call_api: "/katello/api/organizations/{{ org_id }}/content_views"
+
+- name: coerce repo list into dictionary
+  set_fact:
+    tmp: "{{ dict(call_output.json.results | json_query('[*][name, repository_ids]')) }}"
+
+- name: check CV repos have all needed repos
+  set_fact:
+    ti: dummy
+  changed_when: repo_ids[item.1] not in tmp[item.0.name]
+  register: to
+  with_subelements:
+    - "{{ satellite_hammer_views }}"
+    - repos
+  loop_control:
+    label: "{{ item.0.name}}, {{item.1 }}"
+
+- name: Adding repos to the views that need it
+  command: "/usr/bin/hammer content-view add-repository {{ ORG_ID }} --name='{{item.item.0.name}}' --repository-id={{ repo_ids[item.item.1] }}"
+  when: item.changed
+  with_items: "{{ to.results }}"
+  loop_control:
+    label: "{{ item.item.0.name}}, {{item.item.1 }}"
+
+# creating content views
+- name: Check content-views have a published version
+  command: "/usr/bin/hammer --output json content-view info {{ ORG_ID }} --name '{{ item.name }}'"
+  register: hammer_output
+  changed_when: (hammer_output.stdout | from_json).Versions | length == 0
+  with_items: "{{ satellite_hammer_views }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: publish content-view if needed
+  command: "/usr/bin/hammer content-view publish --name '{{ item.item.name }}' --description 'First publish' {{ ORG_ID }}"
+  when: item.changed
+  with_items: [ "{{ hammer_output.results }}" ]
+  loop_control:
+    label: "{{ item.item.name }}"

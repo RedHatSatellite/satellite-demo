@@ -1,0 +1,90 @@
+---
+# vim: sw=2 ts=102 ai
+
+- include_role:
+    name: satellite-shared
+    tasks_from: callsatellite.yml
+  vars:
+    call_name: "get list of smart proxies in default org"
+    call_api: "/katello/api/organizations/{{ org_id }}"
+    call_var: "org_proxies"
+  run_once: true
+
+- include_role:
+    name: satellite-shared
+    tasks_from: callsatellite.yml
+  vars:
+    call_name: "get list of smart proxies in default loc"
+    call_api: "/api/locations/{{ loc_id }}"
+    call_var: "loc_proxies"
+  run_once: true
+
+- name: set org and loc proxy list
+  set_fact:
+    org_proxies: "{{ org_proxies.json.smart_proxies | map(attribute='id') | list }}"
+    loc_proxies: "{{ loc_proxies.json.smart_proxies | map(attribute='id') | list }}"
+    smart_proxies: "{{ groups.capsules | map('extract', hostvars, 'satellite_capsule_id') | map('int') | list | unique }}"
+  run_once: true
+
+- debug:
+    var: proxies
+  run_once: true
+  vars:
+    proxies:
+      org_proxies: "{{ org_proxies | sort }}"
+      loc_proxies: "{{ loc_proxies | sort }}"
+      smart_proxies: "{{ smart_proxies |  sort }}"
+
+- name: "assign default org to missing capsules"
+  run_once: true
+  uri:
+    url: "{{ satellite_url }}/katello/api/organizations/{{ org_id }}"
+    user: "{{ satellite_user }}"
+    password: "{{ satellite_pass }}"
+    method: PUT
+    force_basic_auth: yes
+    validate_certs: false
+    body_format: json
+    body:
+      organization:
+        smart_proxy_ids: "{{ (org_proxies + smart_proxies) | unique }}"
+    headers:
+      Accept: "application/json,version=2"
+  delegate_to: "{{ satellite_api_delegate }}"
+  when: "(smart_proxies | difference(org_proxies) )| length > 0"
+  changed_when: true
+
+- name: "assign default loc to missing capsules"
+  run_once: true
+  uri:
+    url: "{{ satellite_url }}/api/locations/{{ loc_id }}"
+    user: "{{ satellite_user }}"
+    password: "{{ satellite_pass }}"
+    method: PUT
+    force_basic_auth: yes
+    validate_certs: false
+    body_format: json
+    body:
+      location:
+        smart_proxy_ids: "{{ (loc_proxies + smart_proxies) | unique }}"
+    headers:
+      Accept: "application/json,version=2"
+  delegate_to: "{{ satellite_api_delegate }}"
+  when: "(smart_proxies | difference(loc_proxies) ) | length > 0"
+  changed_when: true
+
+- name: "inherit default download policy from repos"
+  uri:
+    url: "{{ satellite_url }}/api/smart_proxies/{{ satellite_capsule_id }}"
+    user: "{{ satellite_user }}"
+    password: "{{ satellite_pass }}"
+    method: PUT
+    force_basic_auth: yes
+    validate_certs: false
+    body_format: json
+    body:
+      smart_proxy:
+        download_policy: inherit
+    headers:
+      Accept: "application/json,version=2"
+  delegate_to: "{{ satellite_api_delegate }}"

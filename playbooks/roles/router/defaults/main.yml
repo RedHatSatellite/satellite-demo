@@ -1,0 +1,11 @@
+# vim: sw=2 ai ts=102
+---
+role_task: configure
+# default dhcp configuration
+# satellite server is assumed to be first satellite in the group (should only be one)
+
+satellite_server: "{{ groups['satellites'][0] }}"
+satellite_server_ip: "{{ lookup('gethostbyname', hostvars[satellite_server].ansible_host) }}"
+
+docker_haproxy: docker.io/haproxy
+docker_ovirt_agent: registry.access.redhat.com/rhev4/rhevm-guest-agent:latest

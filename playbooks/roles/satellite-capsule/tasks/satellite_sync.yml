@@ -1,0 +1,19 @@
+---
+# vim: sw=2 ts=2 ai expandtab
+
+- include_role:
+    name: satellite-shared
+    tasks_from: callsatellite.yml
+  vars:
+    call_name: get capsule sync status
+    call_api: "/katello/api/capsules/{{ satellite_capsule_id }}/content/sync"
+    call_var: "is_capsule_synced"
+
+- name: set capsule sync flag
+  set_fact:
+    is_capsule_synced: "{{ is_capsule_synced.json.last_sync_time | default('') and is_capsule_synced.json.last_sync_time is not none and is_capsule_synced.json.last_sync_time | length > 0 }}"
+
+- name: "kick off sync for capsules that need it (will take some time)"
+  delegate_to: "{{ satellite_server_hostname }}"
+  when: not is_capsule_synced
+  command: "hammer capsule content synchronize --id {{ satellite_capsule_id }} --organization-id {{ org_id }}"

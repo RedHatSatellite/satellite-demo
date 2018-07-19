@@ -1,0 +1,49 @@
+# vim: ts=2 sw=2 expandtab ai
+---
+
+- name: ensure demo packages are removed
+  delegate_to: "{{ item }}"
+  yum:
+    state: absent
+    name: "{{ demo_step2_packages }}"
+  with_items: "{{ groups.clients }}"
+  when: "hostvars[item].satellite_server_hostname in groups.dns"
+
+- name: shutdown first capsule
+  delegate_to: "{{ item }}"
+  command: katello-service stop
+  with_items: "{{ groups.capsules[0:1] }}"
+  notify:
+    - start capsules
+
+- name: install demo packages
+  delegate_to: "{{ item }}"
+  yum:
+    state: latest
+    name: "{{ demo_step2_packages }}"
+  with_items: "{{ groups.clients }}"
+  when: "hostvars[item].satellite_server_hostname in groups.dns"
+
+- name: ensure demo packages are removed
+  delegate_to: "{{ item }}"
+  yum:
+    state: absent
+    name: "{{ demo_step2_packages }}"
+  with_items: "{{ groups.clients }}"
+  when: "hostvars[item].satellite_server_hostname in groups.dns"
+
+- name: shutdown second capsule
+  delegate_to: "{{ item }}"
+  command: katello-service stop
+  with_items: "{{ groups.capsules[1:2] }}"
+  notify:
+    - start capsules
+
+- name: install demo packages
+  delegate_to: "{{ item }}"
+  yum:
+    state: latest
+    name: "{{ demo_step2_packages }}"
+  with_items: "{{ groups.clients }}"
+  when: "hostvars[item].satellite_server_hostname in groups.dns"
+  ignore_errors: true

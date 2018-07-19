@@ -1,0 +1,48 @@
+---
+#vim ts=2 ts=2 ai extandtab
+# defaults file for satellite
+
+###
+# !!!!! OVERRIDE !!!!!
+# These you NEED to override one of these sections
+###
+# must override at least one of these
+#
+satellite_version: "6.3"
+# 99% of the time, the tools version is the same - unless we're testing QA builds
+satellite_tools_version: "{{ satellite_version }}"
+# define this if you want API calls to come from the local server or not
+satellite_api_delegate: "{{ omit }}"
+###
+# END OF OVERRIDE
+###
+
+###
+# +++++ OPTIONAL +++++
+# These you MIGHT want to customize
+###
+# entries that could be customize for the satellite install
+satellite_user: admin
+satellite_pass: redhat123
+satellite_default_location: LocalNet
+satellite_default_organization: "Demo{{ satellite_version }}"
+###
+# END OF OPTIONAL
+###
+
+###
+# non-customize.yml
+# ????? NON-CUSTOMIZE ?????
+# You shouldn't need to customize anything in here
+###
+# need to know ourselves
+satellite_server: "{{ groups['satellites'][0] }}"
+satellite_server_ip: "{{ lookup('gethostbyname', hostvars[satellite_server].ansible_host) }}"
+satellite_server_hostname: "{{ hostvars[satellite_server].inventory_hostname }}"
+
+# shortcuts vars to make hammer easier to call
+# the CV is the demo CV
+CV: "{{ satellite_hammer_views.0.name }}"
+ORG: "--organization='{{ satellite_default_organization }}'"
+_ORG: "{{ satellite_default_organization }}"
+LOC: "{{ satellite_default_location }}"

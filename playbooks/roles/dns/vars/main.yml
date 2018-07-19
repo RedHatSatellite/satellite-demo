@@ -1,0 +1,5 @@
+# vim: ts=2 sw=2 expandtab ai
+---
+rhel_install_packages:
+  - docker
+  - dnsmasq

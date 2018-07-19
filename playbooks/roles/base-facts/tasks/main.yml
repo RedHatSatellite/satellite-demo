@@ -1,0 +1,12 @@
+# vim: sw=2 ai nowrap expandtab
+---
+
+- import_tasks: assign_facts.yml
+  when: not configured_c93fca421c233d1529ad859ac1adff81
+  tags: [always]
+
+- name: set this role as configured
+  set_fact:
+    configured_c93fca421c233d1529ad859ac1adff81: true
+  when: not skip_setup
+  tags: [always]

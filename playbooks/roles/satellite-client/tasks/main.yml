@@ -1,0 +1,13 @@
+---
+# vim: ts=2 sw=2 expandtab ai
+# tasks file for satellite-client
+
+- include_role:
+    name: satellite-shared
+    tasks_from: lookup_org_loc.yml
+  when:
+    - org_id is not defined or loc_id is not defined
+    - org_id | length == 0 or loc_id | length == 0
+
+- include: subscriptions.yml
+  tags: [satellite-client,satellite-client-subscriptions]

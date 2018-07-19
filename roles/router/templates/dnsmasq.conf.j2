@@ -1,8 +1,0 @@
-{% for intf in nmcli_extra_ifaces %}
-interface={{ intf.name }}
-dhcp-range=set:{{ intf.name }},{{ intf.ip | ipaddr('network') | ipaddr(-56) | ipaddr('address')}},{{ intf.ip | ipaddr('network') | ipaddr(-6) | ipaddr('address') }}
-dhcp-boot=set:{{ intf.name }},pxelinux.0,{{ satellite_server }},{{ satellite_server_ip}}
-{% endfor %}
-interface=lo
-bind-interfaces
-conf-dir=/etc/dnsmasq.d

@@ -1,0 +1,8 @@
+---
+# vim: sw=2 ai expandtab
+
+- name: "Facts | set satellite url"
+  set_fact:
+    satellite_url: "https://{{ satellite_server_hostname }}"
+  when: "satellite_url | default('') | length == 0"
+  tags: [always]

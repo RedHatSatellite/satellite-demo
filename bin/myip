@@ -1,0 +1,23 @@
+#!/bin/sh
+
+mydir=$(dirname $0)
+API_KEY=$(find ./$mydir/../playbooks/roles -type f | xargs grep ec2_api_getip_key: | cut -d' ' -f 2)
+API_HEADER=x-api-key
+API_URL=$(find ./$mydir/../playbooks/roles -type f | xargs grep ec2_api_getip_url: | cut -d' ' -f 2)
+
+T=$(mktemp)
+
+trap "rm -rf $T" EXIT
+
+case $1 in
+	-v | --verbose) echo "API_KEY=$API_KEY\nAPI_URL=$API_URL" ;;
+	-h | --help) echo "Usage: $0 (-v | --verbose)" ; exit 1 ;;
+esac
+
+curl -s -H "$API_HEADER: $API_KEY" "$API_URL" > $T
+
+if fgrep -q sourceIP $T ;  then
+	jq '{ "This IP Address": @text "\(.sourceIP)/32"}'  $T
+else
+	jq . $T
+fi

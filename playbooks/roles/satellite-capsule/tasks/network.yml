@@ -1,0 +1,30 @@
+---
+# vim: sw=2 ts=102 ai
+
+# need firewalld for firewalld module
+- name: install firewalld
+  yum:
+    name: firewalld
+    state: present
+
+- name: copy RH-Satellite-Capsule firewalld services file
+  copy:
+    src: RH-Satellite-Capsule-6.xml
+    dest: /etc/firewalld/services
+    mode: 0600
+  register: copy_services
+
+- name: start firewalld
+  systemd:
+    name: firewalld
+    state: "{{ (copy_services is changed) | ternary('restarted', 'started') }}"
+    enabled: yes
+
+- name: firewalld services
+  firewalld:
+    service: "{{ item }}"
+    immediate: true
+    permanent: true
+    state: enabled
+  with_items:
+    - RH-Satellite-Capsule-6

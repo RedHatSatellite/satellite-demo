@@ -1,0 +1,20 @@
+---
+# vim: sw=2 ts=102 ai
+subscription_repos: "{{ satellite_repos }}"
+ok_template_list:
+  - 'Discovery Red Hat kexec'
+  - 'Kickstart default PXEGrub'
+  - 'Kickstart default PXEGrub2'
+  - 'Kickstart default PXELinux'
+  - 'Kickstart default iPXE'
+  - 'Kickstart default'
+  - 'Satellite Atomic Kickstart Default'
+  - 'Satellite Kickstart Default Finish'
+  - 'Satellite Kickstart Default User Data'
+  - 'Satellite Kickstart Default'
+  - 'idm_register'
+  - 'kickstart_networking_setup'
+  - 'puppet.conf'
+  - 'remote_execution_ssh_keys'
+  - 'saltstack_minion'
+  - 'subscription_manager_registration'

@@ -1,0 +1,25 @@
+---
+# vim: ts=2 sw=2 expandtab ai
+
+- name: download bootstrap script
+  get_url:
+    url: "{{ satellite_url }}/pub/bootstrap.py"
+    dest: /tmp/bootstrap.py
+    validate_certs: false
+    mode: 0755
+
+- name: Register using bootstrap script
+  command: >
+    /tmp/bootstrap.py
+    -s {{ satellite_server_hostname }}
+    -l {{ satellite_user }}
+    -p {{ satellite_pass }}
+    -g {{ satellite_subscription_hg }}
+    -a {{ satellite_subscription_ak }}
+    -o {{ satellite_default_organization }}
+    -L {{ satellite_default_location }}
+    --force
+    {% if satellite_skip_puppet %}
+    --skip-puppet
+    {% endif %}
+#--enablerepos='{{ satellite_client_repos | map('trim') | list | join(',') }}'

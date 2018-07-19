@@ -1,0 +1,165 @@
+---
+# vim: sw=2 ts=102 ai
+
+- name: "kick off reboots for hosts that need it"
+  meta: flush_handlers
+
+- include_role:
+    name: rhel
+    tasks_from: hostname.yml
+
+- include_role:
+    name: rhel
+    tasks_from: dns.yml
+
+- name: "generate capsule certs"
+  delegate_to: "{{ satellite_server_hostname }}"
+  command: >
+    flock /etc/passwd capsule-certs-generate 
+    --foreman-proxy-fqdn {{ inventory_hostname }} 
+    {% if satellite_smartproxy | default('') | length > 0 %} --foreman-proxy-cname {{ satellite_smartproxy }} {% endif %} 
+    --certs-tar /root/{{ inventory_hostname }}-certs.tar
+  register: capsule_generated
+
+- name: extract oauth keys
+  set_fact:
+    "{{ item.key }}": "{{ (cg.stdout_lines | select('match', match_var) | list | first | default('')).split('\"')[1] | default('') }}"
+  with_items:
+    - key: oauth_consumer_key
+      val: "--foreman-proxy-oauth-consumer-key"
+    - key: oauth_consumer_secret
+      val: "--foreman-proxy-oauth-consumer-secret"
+    - key: pulp_oauth_secret
+      val: "--foreman-proxy-content-pulp-oauth-secret"
+  vars:
+    cg: "{{ capsule_generated }}"
+    match_var: '  *{{ item.val }}  *".*'
+  loop_control:
+    label: "{{ item.key }}"
+
+- name: assert that oauth keys are set
+  assert:
+    msg: oauth keys should have been captured!
+    that:
+      - item in hostvars[inventory_hostname]
+      - hostvars[inventory_hostname][item] is string
+      - hostvars[inventory_hostname][item] | length > 10
+  with_items:
+    - oauth_consumer_key
+    - oauth_consumer_secret
+    - pulp_oauth_secret
+
+- debug:
+    var: oauth_keys
+  vars:
+    oauth_keys:
+      oauth_consumer_key: "{{ oauth_consumer_key }}"
+      oauth_consumer_secret: "{{ oauth_consumer_secret }}"
+      pulp_oauth_secret: "{{ pulp_oauth_secret }}"
+
+- name: Modify hiera installer file
+  when: "satellite_smartproxy | default('') | length > 0"
+  lineinfile:
+    path: /etc/foreman-installer/custom-hiera.yaml
+    regexp: "^pulp::lazy_redirect_host:"
+    line: "pulp::lazy_redirect_host: {{ satellite_smartproxy }}"
+
+- name: fetch generated cert files
+  delegate_to: "{{ satellite_server_hostname }}"
+  fetch:
+    dest: /tmp/
+    flat: true
+    src: "/root/{{ inventory_hostname }}-certs.tar"
+
+- name: copy generated cert files to host
+  copy:
+    dest: "/root/{{ inventory_hostname }}-certs.tar"
+    src: "/tmp/{{ inventory_hostname }}-certs.tar"
+
+- name: generate puppet certs
+  when:
+    - "hostvars[inventory_hostname].satellite_smartproxy | default('') | length > 0"
+    - "inventory_hostname != groups.capsules[0]"
+  delegate_to: "{{ groups.capsules[0] }}"
+  command: "flock /etc/passwd puppet cert generate {{ inventory_hostname }} --dns_alt_names={{ satellite_smartproxy }}"
+  args:
+    creates: "{{ puppetlabs_etc }}/ssl/certs/{{ inventory_hostname }}.pem"
+  vars:
+    puppetlabs_etc: /var/lib/puppet
+
+- name: archive puppet certs
+  when:
+    - "hostvars[inventory_hostname].satellite_smartproxy | default('') | length > 0"
+    - "inventory_hostname != groups.capsules[0]"
+  delegate_to: "{{ groups.capsules[0] }}"
+  archive:
+    dest: "/tmp/{{ inventory_hostname }}-puppet-certs.tar.gz"
+    path:
+      - "{{ puppetlabs_etc }}/ssl/*/{{ inventory_hostname }}.pem"
+      - "{{ puppetlabs_etc }}/ssl/certs/ca.pem"
+      - "{{ puppetlabs_etc }}/ssl/crl.pem"
+  vars:
+    puppetlabs_etc: /var/lib/puppet
+
+- name: fetch puppet certs
+  when:
+    - "hostvars[inventory_hostname].satellite_smartproxy | default('') | length > 0"
+    - "inventory_hostname != groups.capsules[0]"
+  delegate_to: "{{ groups.capsules[0] }}"
+  fetch:
+    dest: /tmp/
+    flat: true
+    src: "/tmp/{{ inventory_hostname }}-puppet-certs.tar.gz"
+
+- name: copy puppet certs to capsules
+  when:
+    - "hostvars[inventory_hostname].satellite_smartproxy | default('') | length > 0"
+    - "inventory_hostname != groups.capsules[0]"
+  copy:
+    dest: "/root/{{ inventory_hostname }}-puppet-certs.tar.gz"
+    src: "/tmp/{{ inventory_hostname }}-puppet-certs.tar.gz"
+
+- name: install puppet server on secondary capsules
+  when:
+    - "hostvars[inventory_hostname].satellite_smartproxy | default('') | length > 0"
+    - "inventory_hostname != groups.capsules[0]"
+  yum:
+    name: "{{ puppet_server_package }}"
+  vars:
+    puppet_server_package: puppet
+
+- name: unarchive puppet certs to capsules
+  when:
+    - "hostvars[inventory_hostname].satellite_smartproxy | default('') | length > 0"
+    - "inventory_hostname != groups.capsules[0]"
+  shell: |
+    mkdir {{ puppetlabs_etc }}/ssl
+    tar -xvzf /root/{{ inventory_hostname }}-puppet-certs.tar.gz -C {{ puppetlabs_etc }}/ssl
+  args:
+    warn: false
+    # creates: "{{ puppetlabs_etc }}/ssl/certs/{{ inventory_hostname }}.pem"
+  vars:
+    puppetlabs_etc: /var/lib/puppet
+
+- name: "install: install satellite"
+  command: >
+    satellite-installer --scenario capsule
+    --foreman-proxy-content-parent-fqdn {{ satellite_server_hostname }}
+    --foreman-proxy-register-in-foreman true
+    --foreman-proxy-foreman-base-url {{ satellite_url }}
+    --foreman-proxy-trusted-hosts {{ satellite_server_hostname }}
+    --foreman-proxy-trusted-hosts {{ inventory_hostname }}
+    --foreman-proxy-oauth-consumer-key {{ oauth_consumer_key }}
+    --foreman-proxy-oauth-consumer-secret {{ oauth_consumer_secret }}
+    --foreman-proxy-content-pulp-oauth-secret {{ pulp_oauth_secret }}
+    --foreman-proxy-content-certs-tar /root/{{ inventory_hostname }}-certs.tar
+    {% if satellite_smartproxy | default('') | length > 0 %}
+    --puppet-dns-alt-names {{ satellite_smartproxy }}
+    --puppet-ca-server {{ inventory_hostname }}
+    --foreman-proxy-puppetca false
+    --puppet-server-ca {{ (inventory_hostname == groups.capsules[0]) | ternary('true', 'false') }}
+    {% endif %}
+    --puppet-server-foreman-url {{ satellite_url }}
+
+- set_fact:
+    satellite_is_installed: true

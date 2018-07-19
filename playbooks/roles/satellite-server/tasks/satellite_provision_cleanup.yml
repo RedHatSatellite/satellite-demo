@@ -1,0 +1,6 @@
+---
+# vim: sw=2 ts=2 ai expandtab
+- include: satellite_provision_cleanup_templates.yml
+- include: satellite_provision_add_templates.yml
+- include: satellite_provision_add_partitions.yml
+- include: satellite_provision_puppet_autosign.yml

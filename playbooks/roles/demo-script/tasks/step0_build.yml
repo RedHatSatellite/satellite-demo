@@ -1,0 +1,81 @@
+# vim: ts=2 sw=2 expandtab ai
+---
+
+- name: "add demo user so we can build the rpm"
+  user:
+    name: demo
+    comment: Demo User
+
+- name: "get rpm version counter"
+  become: true
+  become_user: demo
+  shell: |
+    set -e -E
+    [ -r {{ demo_counter_file }} ] || echo 0 > {{ demo_counter_file }}
+    cnt=$(cat {{ demo_counter_file }})
+    cnt=$[ cnt + 1 ]
+    echo $cnt
+    echo $cnt > {{ demo_counter_file }}
+  register: counter
+
+- set_fact:
+    counter: "{{ orig_counter }}"
+  vars:
+    orig_counter: "{{ counter.stdout }}"
+
+- name: "Ensure build dir exists"
+  become: true
+  become_user: demo
+  file:
+    state: directory
+    path: "{{ demo_build_dir }}"
+
+- name: Create tempdir
+  connection: local
+  tempfile:
+    state: directory
+    suffix: ".build"
+  register: tempdir
+  notify:
+    - erase tempdir
+
+- name: "Copy files locally"
+  connection: local
+  copy:
+    src: "{{ item }}"
+    dest: "{{ tempdir.path }}/"
+  with_items:
+    - COPYING
+    - demoapp
+    - demoapp.service
+    - Makefile
+    - README
+
+- name: "Copy templates to tempdir"
+  connection: local
+  template:
+    src: "{{ item }}.j2"
+    dest: "{{ tempdir.path }}/{{ item }}"
+  with_items:
+    - demoapp.spec
+
+- name: "Create dist archive"
+  connection: local
+  command: "make -C {{ tempdir.path }} dist"
+
+- name: "Copy to remote"
+  copy:
+    src: "/tmp/demoapp-latest.tar.gz"
+    dest: "/tmp/"
+
+- name: "Extract spec file"
+  become: true
+  become_user: demo
+  command: "tar -C {{ demo_build_dir }} -xvzf /tmp/demoapp-latest.tar.gz demoapp.spec"
+  args:
+    warn: false
+
+- name: "Build rpm"
+  become: true
+  become_user: demo
+  command: "rpmbuild -tb /tmp/demoapp-latest.tar.gz"

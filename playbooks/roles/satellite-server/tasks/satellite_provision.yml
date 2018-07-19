@@ -1,0 +1,167 @@
+---
+# vim: sw=2 ts=102 ai
+
+###
+# Default Org and Location sanity
+###
+- name: "Provisioning | Making sure default location and org belong to one another"
+  command: "/usr/bin/hammer location add-organization --name={{ LOC }} {{ ORG_ID }}"
+  changed_when: false
+  with_items:
+    - "{{ LOC }}"
+  loop_control:
+    label: "/usr/bin/hammer location add-organization --name={{ LOC }} {{ ORG_ID }}"
+
+###
+# Default domain and puppet env sanity
+###
+- name: "Provisioning | Making sure default domain belongs to the default location and org"
+  command: "/usr/bin/hammer {{item.0.type}} {{item.1.type}} --{{item.1.param}} {{item.1.value}} --name '{{item.0.name}}'"
+  changed_when: false
+  with_nested:
+    - 
+      - type: organization
+        name: "{{_ORG}}"
+      - type: location
+        name: "{{LOC}}"
+    -
+      - type: add-environment
+        param: environment-id
+        value: "1"
+      - type: add-domain
+        param: domain-id
+        value: "1"
+  loop_control:
+    label: "/usr/bin/hammer {{item.0.type}} {{item.1.type}} --{{item.1.param}} {{item.1.value}} --name '{{item.0.name}}'"
+
+###
+# Default host sanity
+###
+# - name: "Provisioning | Grabing default host info"
+#   command: "/usr/bin/hammer --output json host info --name='{{ hostname }}'"
+#   changed_when: false
+#   register: hammer_output
+# 
+# - name: "Provisioning | making sure default host has a location and an org"
+#   set_fact:
+#     need_org: "{{ item.Organization is not defined }}"
+#     need_loc: "{{ item.Location is not defined }}"
+#     default_id: "{{ item.Id }}"
+#   with_items:
+#     - "{{ hammer_output.stdout | from_json }}"
+#   loop_control:
+#     label: "{{ item.Name }}"
+# 
+# - name: "Provisioning | Making sure default host has a location and org"
+#   command: "/usr/bin/hammer host update --id='{{ default_id }}' {%if need_loc %}--location='{{LOC}}'{%endif%} {%if need_org%}--organization='{{ satellite_default_organization }}'{%endif%}"
+#   when: need_org or need_loc
+#   with_items:
+#     - "{{ LOC }}"
+#   loop_control:
+#     label: "/usr/bin/hammer host update --id='{{ default_id }}' {%if need_loc %}--location='{{LOC}}'{%endif%} {%if need_org%}--organization='{{ satellite_default_organization }}'{%endif%}"
+
+###
+# Setup our subnets
+###
+- name:
+  debug:
+    var: satellite_subnets
+
+- name: "Provisioning | coerce subnets into set"
+  set_fact:
+    subnets: "{{ dict(satellite_subnets).items() | list }}"
+
+- name: "Provisioning | grab subnet list"
+  command: "/usr/bin/hammer --output json subnet list"
+  changed_when: false
+  register: hammer_output
+
+- name: "Provisioning | check if subnets are created" 
+  set_fact:
+    ti: dummy
+  changed_when: item.0 not in hammer_list
+  register: tmp
+  with_items: "{{ [ subnets ]}}"
+  vars:
+    hammer_list: "{{ hammer_output.stdout | from_json | map(attribute='Name') | list }}"
+
+- name: "Provisioning | create subnet if required"
+  command: |
+    /usr/bin/hammer subnet create --organization-ids={{_ORG_ID}} --boot-mode=Static --dns-primary {{item.item.1}} --name "{{item.item.0}}" --network={{ item.item.0 | ipaddr('network') }} --mask={{ item.item.0 | ipaddr('netmask') }} --gateway={{ item.item.1 }} --ipam=None {% if satellite_enable_tftp %}--tftp-id=1 {% endif %} --domain-ids=1
+  when: item.changed
+  with_items: "{{ tmp.results }}"
+  loop_control:
+    label: "{{ item.item.0 }} -> {{ item.item.1 }}"
+
+- name: "Provisioning | ensure subnets are attached to location"
+  command: "/usr/bin/hammer location add-subnet --name='{{LOC}}' --subnet='{{item.item.0}}'"
+  with_items: "{{ tmp.results }}"
+  changed_when: false
+  loop_control:
+    label: "/usr/bin/hammer location add-subnet --name='{{LOC}}' --subnet='{{item.item.0}}'"
+
+- include: satellite_provision_subnet_tftp_discovery.yml
+- include: satellite_provision_hostgroups.yml
+- include: satellite_provision_ak.yml
+
+###
+# Attach AK to HG
+###
+- name: "Provisioning | Grabbing AKs in HG"
+  command: "/usr/bin/hammer --output=json hostgroup info --name={{ item.name }}"
+  register: hammer_output
+  when: item.ak | length > 0
+  changed_when: false
+  with_items: "{{ satellite_hammer_views }}"
+
+- name: "Provisioning | Determining if AK is in HG"
+  set_fact:
+    hg_ak: >
+      {{ satellite_hammer_views | map(attribute='name') |
+      zip( _tmp | map('json_query', query) | map('default', None, True), 
+      satellite_hammer_views | map(attribute='ak') | map('default', None, True)
+      ) |
+      list }}
+  vars:
+    query: "Parameters[?name=='kt_activation_keys'].value | [0]"
+    _tmp: "{{ hammer_output.results | map(attribute='stdout') | map('default', '{}') | map('from_json') | list }}"
+
+- name: "Provisioning | Assign AK to HG if needed"
+  command: "/usr/bin/hammer --output=json hostgroup set-parameter --hostgroup='{{item.0}}' --name=kt_activation_keys --value='{{item.2}}'"
+  when: item.1 is none and item.2 is not none
+  with_items: "[{{ hg_ak }}]"
+  loop_control:
+    label: "/usr/bin/hammer --output=json hostgroup set-parameter --hostgroup='{{item.0}}' --name=kt_activation_keys --value='{{item.2}}'"
+
+###
+# Remaster pxeless discovery image
+###
+# - name: "Provisioning | Remastering PXE-less discovery image"
+- block:
+  - name: "Provisioning | getting list of pxe-less discovery image files"
+    command: "/usr/bin/rpm -ql foreman-discovery-image"
+    register: tmp
+    changed_when: false
+
+  - name: "Provisioning | locating iso image"
+    set_fact:
+      old_image: "{{ iso_lines }}"
+      new_image: "/root/auto-{{ iso_lines | basename}}"
+    vars:
+      iso_lines: "{{ tmp.stdout_lines | select('search', '\\.iso$') | sort | list | last}}"
+
+  - fail:
+      msg: "unable to find pxe-less discovery iso image"
+    when: |
+      not old_image or old_image.strip() == ''
+
+  - name: "Provisioning | Remastering PXE-less discovery image to {{new_image}}"
+    command: "/usr/bin/discovery-remaster '{{ old_image }}' 'proxy.url=https://{{hostname}}:9090 proxy.type=proxy fdi.pxauto=1' '{{new_image}}'"
+    args:
+      creates: "{{new_image}}"
+    register: remaster
+
+  - debug:
+      msg: "You need to upload {{ new_image }} to your ISO_STORAGE for your virtualization envrionment"
+
+  when: satellite_enable_discovery

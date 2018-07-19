@@ -1,0 +1,70 @@
+#!/usr/bin/env python2.7
+# vim: sw=4 ts=4 expandtab ai
+from BaseHTTPServer import BaseHTTPRequestHandler,HTTPServer
+from signal import signal, SIGINT, SIGTERM, SIG_DFL
+from os import environ
+from subprocess import check_output
+from socket import gethostname
+
+PORT = int(environ.get('PORT', 8080))
+APP = 'Demo Application'
+VERSION = "%%%UPDATE_VERSION_HERE%%%"
+BUILD = "%%%BUILD_INFO_HERE%%%"
+PAYLOAD = "\n".join([
+    APP,
+    "version      : v%s" % VERSION,
+    "Built        : %s" % (BUILD),
+    "Current Host : %s" % (gethostname()),
+    ""
+    ])
+
+#This class will handles any incoming request from
+#the browser 
+class myHandler(BaseHTTPRequestHandler):
+    #Handler for the GET requests
+    def do_GET(self):
+        msg = PAYLOAD + "\n" + check_output('uptime')
+        self.send_response(200)
+        self.send_header('Content-type','text/plain')
+        self.send_header('Content-length', len(msg))
+        self.end_headers()
+        # Send the html message
+        self.wfile.write(msg)
+        return
+
+    def do_OPTIONS(self):
+        msg = PAYLOAD + "\n" + check_output('uptime')
+        self.send_response(200)
+        self.send_header('Content-type','text/plain')
+        self.send_header('Content-length', 0)
+        self.send_header('Allow', 'OPTIONS,GET')
+        self.end_headers()
+        self.wfile.write('')
+        return
+
+def close():
+    print 'shutting down the web server'
+    if server:
+        server.socket.close()
+
+def sighandler(signum, frame):
+    signal(SIGINT, SIG_DFL)
+    signal(SIGTERM, SIG_DFL)
+    print 'got signal %d, exiting...' % signum
+    exit(signum)
+
+server = None
+# signal(SIGINT, sighandler)
+signal(SIGTERM, sighandler)
+
+try:
+    #Create a web server and define the handler to manage the
+    #incoming request
+    server = HTTPServer(('', PORT), myHandler)
+    print 'Started httpserver on port ' , PORT
+
+    #Wait forever for incoming htto requests
+    server.serve_forever()
+
+except KeyboardInterrupt:
+    close()

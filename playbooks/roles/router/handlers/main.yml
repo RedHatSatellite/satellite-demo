@@ -1,0 +1,12 @@
+# vim: sw=2 ai ts=102
+---
+- name: restart dnsmasq
+  systemd:
+    name: dnsmasq
+    state: restarted
+    enabled: True
+  tags: [ always ]
+
+- name: restart iptables
+  include: "handler_task_docker.yml"
+  tags: [ always ]

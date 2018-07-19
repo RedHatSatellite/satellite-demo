@@ -1,0 +1,48 @@
+---
+# vim: sw=2 ts=102 ai
+
+- include_role:
+    name: satellite-shared
+    tasks_from: callsatellite.yml
+  vars:
+    call_name: "get lifecycle environments available"
+    call_api: "/katello/api/capsules/{{ satellite_capsule_id }}/content/available_lifecycle_environments?organization_id={{ org_id }}"
+  failed_when: call_output.json.results | length == 0
+
+- include_role:
+    name: satellite-shared
+    tasks_from: callsatellite.yml
+  vars:
+    call_name: "get lifecycle environments already attached"
+    call_api: "/katello/api/capsules/{{ satellite_capsule_id }}/content/lifecycle_environments?organization_id={{ org_id }}"
+    call_var: "env_ids"
+  failed_when: call_output.json.results | length == 0
+
+- name: "set environment variables to add"
+  set_fact:
+    env_ids: "{{ env_avail | difference(env_attached) }}"
+  vars:
+    env_avail: "{{ call_output.json.results | map(attribute='id') | list }}"
+    env_attached: "{{ env_ids.json.results | map(attribute='id') | list }}"
+
+- name: "list of env ids to add"
+  debug:
+    msg: "{{ env_ids | sort | join(', ') }}"
+
+- name: "assign lifecycle environments to capsules"
+  uri:
+    url: "{{ satellite_url }}/katello/api/capsules/{{ satellite_capsule_id }}/content/lifecycle_environments"
+    user: "{{ satellite_user }}"
+    password: "{{ satellite_pass }}"
+    method: POST
+    force_basic_auth: yes
+    validate_certs: false
+    body_format: json
+    body:
+      environment_id: "{{ env_ids }}"
+    headers:
+      Accept: "application/json,version=2"
+  delegate_to: "{{ satellite_api_delegate }}"
+  when: env_ids | length > 0
+  changed_when: true
+
