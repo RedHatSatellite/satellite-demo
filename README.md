@@ -207,10 +207,10 @@ bake-off situation. I will gladly help you get in contact with someone at Red
 Hat that **CAN** help you do these things.
 
 The purpose of this playbook is to build a demo and an experimental environment
-to show the value of OCP and CNS backed by gluster. If you have any questions
-or run into issues running this playbook to achieve that goal, then please
+for Satellite, some capsules, and some clients.  If you have any questions or
+run into issues running these playbooks to achieve that goal, then please
 create a GitHub issue so I can address it!
 
-If you have other questions or issues with OCP or CNS in general, I'll gladly
+If you have other questions or issues with Satellite in general, I'll gladly
 help you reach the correct resource at Red Hat!
 
