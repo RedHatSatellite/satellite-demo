@@ -1,0 +1,16 @@
+[Unit]
+Description=haproxy container
+After=docker.service
+Requires=docker.service
+PartOf=docker.service
+
+[Service]
+ExecStartPre=-/usr/bin/docker rm -f {{ haproxy_container_name }}
+ExecStart=/usr/bin/docker run --rm --net=host --name={{ haproxy_container_name }} -v /dev/log:/dev/log --privileged  -v /etc/haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro,z {{ haproxy_image }}
+ExecStop=/usr/bin/docker stop {{ haproxy_container_name }}
+SyslogIdentifier={{ haproxy_container_name }}
+Restart=always
+RestartSec=5s
+
+[Install]
+WantedBy=docker.service

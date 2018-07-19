@@ -1,0 +1,83 @@
+---
+# vim: sw=2 ai expandtab
+
+- name: "Facts | set satellite url for install host"
+  set_fact:
+    satellite_url: "https://{{ inventory_hostname }}"
+  when: "satellite_url  | default('') | length == 0"
+
+- block:
+
+  - include: satellite_helper_callsatellite.yml
+    vars:
+      call_name: organization id
+      call_api: "/api/organizations?search=name={{ satellite_default_organization | urlencode() }}"
+      call_var: ti
+  - include: satellite_helper_callsatellite.yml
+    vars:
+      call_name: location id
+      call_api: "/api/locations?search=name={{ satellite_default_location | urlencode() }}"
+      call_var: to
+  - name: "Fact | set organization and location id"
+    set_fact:
+      org_id: "{{ (ti.json.results | first).id }}"
+      loc_id: "{{ (to.json.results | first).id }}"
+  - name: "Fact | set verbose organzation and location parameters"
+    set_fact:
+      ORG_ID: "--organization-id={{org_id}}"
+      _ORG_ID: "{{org_id}}"
+      LOC_ID: "--location-id={{loc_id}}"
+      _LOC_ID: "{{loc_id}}"
+
+  when: ORG_ID is not defined or LOC_ID is not defined
+
+- block:
+  - include: satellite_helper_callsatellite.yml
+    vars:
+      call_name: "get arch id for {{ satellite_hammer_basearch }}"
+      call_api: "/api/architectures?search=name={{ satellite_hammer_basearch | urlencode }}"
+      call_var: ti
+  - name: "Fact | set arch_id fpr {{ satellite_hammer_basearch }}"
+    set_fact:
+      arch_id: "{{ (ti.json.results | first).id }}"
+  - include: satellite_helper_callsatellite.yml
+    vars:
+      call_name: "get OS id for {{ satellite_hammer_basearch }}"
+      call_api: "/api/architectures/{{ arch_id }}"
+      call_var: ti
+  - include: satellite_helper_callsatellite.yml
+    vars:
+      call_name: "get Library ID for {{ satellite_default_organization }}"
+      call_api: "/katello/api/organizations/{{ org_id }}/environments?name=Library"
+      call_var: to
+  - name: "Fact | set os_id for {{ satellite_hammer_basearch }}"
+    set_fact:
+      os_id: "{{ (dict(tmp) | dictsort | last)[1] }}"
+      library_id: "{{ to.json.results[0].id }}"
+    vars:
+      # querystr: "sort_by(operatingsystems, &title) | reverse(@) | [?name=='RedHat'] | [0] | id"
+      querystr: "sort_by(operatingsystems, &title)"
+      tmp: >-
+        [
+        {% for o in ti.json.operatingsystems %}
+        {% if o.name == 'RedHat' %}
+        [ "{{ o.title }}", {{ o.id }} ],
+        {% endif %}
+        {% endfor %}
+        ]
+    when: |
+      tmp|length > 0
+
+  when: arch_id is not defined or os_id is not defined
+
+- debug:
+    var: dbg_data
+  vars:
+    dbg_data:
+      org_id: "{{ org_id | default(0) }}"
+      ORG_ID: "{{ ORG_ID | default(0) }}"
+      loc_id: "{{ loc_id | default(0) }}"
+      LOC_ID: "{{ LOC_ID | default(0) }}"
+      arch_id: "{{ arch_id | default(0) }}"
+      os_id: "{{ os_id | default(0) }}"
+      library_id: "{{ library_id | default(0) }}"

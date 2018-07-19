@@ -1,0 +1,17 @@
+# vim: ts=2 sw=2 expandtab ai
+---
+
+- name: add hosts to /etc/hosts file
+  become: true
+  run_once: true
+  blockinfile:
+    unsafe_writes: true
+    state: "{{ sshconfig_clean | ternary('absent', 'present') }}"
+    path: /etc/hosts
+    block: |
+      {% for hn in groups.all | sort %}
+      {%   if hostvars[hn].public_ip | default('') | length > 0 %}
+      {%     set sat = '' if hn not in groups.dns else 'dns_server' %}
+      {{ hostvars[hn].public_ip }}     {{ hn }} {{ hostvars[hn].hostname }} {{ sat }}
+      {%   endif %}
+      {% endfor %}

@@ -1,0 +1,11 @@
+---
+:modules:
+    - hammer_cli_foreman
+
+:foreman:
+    :host: 'https://{{ hostname }}'
+    :username: '{{ satellite_user }}'
+    :password: '{{ satellite_pass }}'
+
+:log_dir: '~/.foreman/log'
+:log_level: 'error'

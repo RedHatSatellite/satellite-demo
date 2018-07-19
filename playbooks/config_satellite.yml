@@ -1,0 +1,12 @@
+# vim: ts=2 sw=2 expandtab ai
+---
+- name: Configure satellite server
+  any_errors_fatal: true
+  force_handlers: true
+  hosts: satellites
+  gather_facts: true
+  connection: smart
+  vars: 
+    subscription_repos: "{{ satellite_repos }}"
+  roles:
+    - satellite-server

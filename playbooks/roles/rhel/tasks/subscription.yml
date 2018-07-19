@@ -1,0 +1,41 @@
+# vim: ts=2 sw=2 expandtab ai
+---
+- name: check if RHUI repos need to be disabled
+  when:
+    - ansible_pkg_mgr == 'yum'
+    - subscription_org | length > 0
+    - subscription_ak | length > 0
+  shell: |
+    grep 'enabled.*=.*1' /etc/yum.repos.d/redhat-rhui* || true
+    grep 'enabled.*=.*1' /etc/yum/pluginconf.d/rhnplugin.conf || true
+  register: rhui_check
+  changed_when: "'enabled' in rhui_check.stdout"
+
+- name: disable RHUI repos
+  when:
+    - ansible_pkg_mgr == 'yum'
+    - subscription_org | length > 0
+    - subscription_ak | length > 0
+    - rhui_check is changed
+  shell: |
+    sed -i 's/enabled.*=.*1/enabled = 0/' /etc/yum.repos.d/redhat-rhui*
+    sed -i 's/enabled.*=.*1/enabled = 0/' /etc/yum/pluginconf.d/rhnplugin.conf
+  args:
+    warn: false
+
+- name: register system
+  redhat_subscription:
+    state: present
+    org_id: "{{ subscription_org }}"
+    activationkey: "{{ subscription_ak }}"
+  when:
+    - subscription_org | length > 0
+    - subscription_ak | length > 0
+    - subscription_register
+
+- name: enable repos
+  subscription_repos:
+    repos: "{{ subscription_repos }}"
+  when:
+    - ansible_pkg_mgr == 'yum'
+    - subscription_register

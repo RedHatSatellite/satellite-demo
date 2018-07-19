@@ -1,0 +1,18 @@
+# vim: ts=2 sw=2 expandtab ai
+---
+- name: restart haproxy
+  systemd:
+    name: haproxy
+    daemon_reload: true
+    enabled: true
+    state: restarted
+
+- name: restart dnsmasq
+  systemd:
+    name: dnsmasq
+    daemon_reload: true
+    enabled: true
+    state: restarted
+
+- name: refresh facts
+  setup:

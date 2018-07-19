@@ -1,0 +1,61 @@
+---
+# vim: sw=2 ts=2 ai expandtab
+
+- name: "Provisioning | ensure subnet has tftp or discovery"
+  uri:
+    url: "{{ satellite_url }}/api/subnets/"
+    user: "{{ satellite_user }}"
+    password: "{{ satellite_pass }}"
+    force_basic_auth: yes
+    validate_certs: false
+    headers:
+      Accept: "application/json,version=2"
+  connection: local
+  register: api_out
+  when: satellite_enable_tftp or satellite_enable_discovery
+
+- name: set TFTP list
+  set_fact:
+    tftp_list: "{{ (api_out.json | default({})).results | default([]) | json_query('[*].{n: name, i: id, t: tftp_id}') }}"
+  when: satellite_enable_tftp
+
+- name: set Discovery list
+  set_fact:
+    disc_list: "{{ (api_out.json | default({})).results | default([]) | json_query('[*].{n: name, i: id, d: discovery_id}') }}"
+  when: satellite_enable_discovery
+
+- set_fact:
+    tftp_list: "{{ tftp_list | default([]) | rejectattr('t', 'equalto', 1) | map(attribute='i') | list }}"
+    disc_list: "{{ disc_list | default([]) | rejectattr('d', 'equalto', 1) | map(attribute='i') | list }}"
+
+- name: "Provisioning | ensure subnet has tftp "
+  uri:
+    url: "{{ satellite_url }}/api/subnets/{{ item }}"
+    user: "{{ satellite_user }}"
+    password: "{{ satellite_pass }}"
+    force_basic_auth: yes
+    validate_certs: false
+    body_format: json
+    body:
+      tftp_id: 1
+    method: PUT
+  connection: local
+  when: satellite_enable_tftp
+  changed_when: true
+  with_items: "{{ tftp_list }}"
+
+- name: "Provisioning | ensure subnet has discovery"
+  uri:
+    url: "{{ satellite_url }}/api/subnets/{{ item }}"
+    user: "{{ satellite_user }}"
+    password: "{{ satellite_pass }}"
+    force_basic_auth: yes
+    validate_certs: false
+    body_format: json
+    body:
+      discovery_id: 1
+    method: PUT
+  connection: local
+  changed_when: true
+  when: satellite_enable_discovery
+  with_items: "{{ disc_list }}"

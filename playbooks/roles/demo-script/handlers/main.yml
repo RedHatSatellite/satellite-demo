@@ -1,0 +1,12 @@
+# vim: ts=2 sw=2 expandtab ai
+---
+- name: start capsules
+  delegate_to: "{{ item }}"
+  command: katello-service start
+  with_items: "{{ groups.capsules }}"
+
+- name: erase tempdir
+  connection: local
+  file:
+    state: absent
+    path: "{{ tempdir.path }}"

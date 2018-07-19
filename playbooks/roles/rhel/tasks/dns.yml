@@ -1,0 +1,51 @@
+# vim: ts=2 sw=2 expandtab ai
+---
+
+- name: find connection profile
+  shell: |
+    UUID=$(nmcli --fields uuid,device c show | grep "{{ ansible_default_ipv4.alias }} *$" | cut -d ' ' -f 1);
+    echo "uuid: $UUID"
+  register: out_profile
+  changed_when: false
+
+- set_fact:
+    out_profile: "{{ out_profile.stdout | from_yaml }}"
+
+- name: ensure NetworkManager protects resolv.conf
+  shell: |
+    nmcli c show "{{ out_profile.uuid }}" | grep -i -e ipv4.ignore-auto-dns: -e ipv4.dns: | cut -d. -f 2-
+  changed_when: false
+  register: out_resolv
+
+- set_fact:
+    out_resolv:
+      dns: "{{ ( yml.dns | default('') ) is none | ternary('', yml.dns | default('') ) }}"
+      ignore-auto-dns: "{{ yml['ignore-auto-dns'] | default(False) }}"
+    dns_ip: "{{ (hostvars[groups.dns | first | default('')]| default({})).internal_ip | default('') }}"
+  vars:
+    yml: "{{ out_resolv.stdout | from_yaml }}"
+
+- debug:
+    var: vv
+  vars:
+    vv: 
+      out_profile: "{{ out_profile }}"
+      out_resolv: "{{ out_resolv }}"
+      dns_ip: "{{ dns_ip }}"
+
+- name: backup old resolv.conf
+  copy:
+    src: /etc/resolv.conf
+    dest: /etc/resolv.conf.bak
+    remote_src: true
+    force: false
+
+- name: point dns locally
+  command: "/usr/bin/nmcli c modify '{{ out_profile.uuid }}' -ipv4.dns '' ipv4.dns {{ dns_ip }} ipv4.ignore-auto-dns yes"
+  notify: restart network
+  when:
+    - inventory_hostname not in groups.dns
+    - (dns_ip | length > 0 and dns_ip not in out_resolv.dns ) or not out_resolv['ignore-auto-dns']
+
+- name: ensure network restarted
+  meta: flush_handlers

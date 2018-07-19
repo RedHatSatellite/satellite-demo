@@ -1,0 +1,22 @@
+#!/bin/sh
+
+capsule_ids=$(curl -s -k -H content-type:application/json --user admin:redhat123 https://satellite.example.com/katello/api/capsules?search=name'<>satellite.example.com' | jq '.results[] | @text "\(.id):\(.name)"')
+
+total=0
+for host in $capsule_ids ; do
+	total=$[ $total + 1 ]
+done
+
+cnt=0
+(
+echo '{"changed": false, "failed": false, "results": ['
+for host in $capsule_ids ; do
+	cnt=$[ $cnt + 1 ]
+	OIFS="$IFS"
+	eval 'IFS=:\";set $host;ID=$2;NAME=$3'
+	IFS=$OIFS
+	curl -s -k -H content-type:application/json --user admin:redhat123 https://satellite.example.com/katello/api/capsules/$ID/content/sync | jq "{id: \"$ID\", name: \"$NAME\", last: .last_sync_time, active: .active_sync_tasks, failed: .last_failed_sync_tasks}"
+	[ $cnt -lt $total ] && echo ,
+done
+echo '] }'
+) | jq .

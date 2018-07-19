@@ -1,0 +1,34 @@
+# vim: ts=2 sw=2 expandtab ai
+---
+- name: ensure required packages are installed
+  when: |
+    ansible_pkg_mgr == 'yum'
+  yum:
+    name: "{{ item }}"
+    state: present
+    enablerepo: "{{ (rhel_extras_repo | default('') | trim | length > 0) | ternary(rhel_extras_repo, omit) }}"
+  with_items: "{{ rhel_install_packages }}"
+  notify:
+    - stop docker
+    - start docker
+
+- name: ensure ssh forward is enabled
+  blockinfile:
+    path: /etc/ssh/sshd_config
+    block: |
+      AllowAgentForwarding yes
+      AllowTcpForwarding yes
+  notify: restart sshd
+
+- name: add docker group so we can run it as a normal user
+  group:
+    name: docker
+    system: true
+    state: present
+  when: ansible_pkg_mgr != 'yum'
+  notify:
+    - stop docker
+    - add docker group
+    - start docker
+
+- meta: flush_handlers

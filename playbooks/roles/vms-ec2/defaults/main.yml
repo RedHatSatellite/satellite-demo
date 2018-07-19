@@ -1,0 +1,23 @@
+# vim: ts=2 sw=2 expandtab ai
+---
+ec2_create: false
+ec2_destroy: false
+
+ec2_api_getip_key: UoXQYn71TN8yahIOgHPgt95CjtHzcBJacrlKjhJ5
+ec2_api_getip_url: https://5wvzlz5jfh.execute-api.us-east-1.amazonaws.com/Prod
+
+ec2_demo_tag: satellite1
+
+# you can override this and put your current ip or network, but the playbook
+# will automatically put your external IP here
+ec2_mynetworks: [ ] 
+ec2_instance_type: t2.small
+ec2_keypair: ansible-dev
+ec2_security_group_name: "satellite_{{ ec2_demo_tag }}"
+
+# ec2_vpc_id: OPTIONAL DEFINEME
+# ec2_vpc_subnet: OPTIONAL DEFINEME
+# ec2_ami_image: DEFINEME
+ec2_public_ip: True
+ec2_wait: 300
+ec2_region: us-east-1

@@ -1,0 +1,5 @@
+# vim: ts=2 sw=2 expandtab ai
+---
+ec2_drive_map: "{{ default_ec2_drive_map }}"
+ec2_volumes: "{{ default_ec2_volumes }}"
+ec2_volume_sizes: "{{ default_ec2_volume_sizes }}"

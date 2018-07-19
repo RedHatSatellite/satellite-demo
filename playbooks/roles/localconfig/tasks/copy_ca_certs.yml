@@ -1,0 +1,15 @@
+# vim: ts=2 sw=2 expandtab ai
+---
+- name: copy ca certs to pki anchors
+  connection: smart
+  become: true
+  copy:
+    dest: "/etc/pki/ca-trust/source/anchors/{{ item.dst }}"
+    src: "{{ item.src }}"
+  with_items:
+    - { src: "{{ easy_rsa_ocp_pki }}/ca.crt", dst: "ocp-ca.crt" }
+    - { src: "{{ easy_rsa_master_pki }}/ca.crt", dst: "company-ca-crt" }
+  notify: updated ca
+
+- name: update ca certs if needed
+  meta: flush_handlers

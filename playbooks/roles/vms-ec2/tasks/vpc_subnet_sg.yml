@@ -1,0 +1,84 @@
+# vim: ts=2 sw=2 expandtab ai
+---
+- name: lookup VPC
+  run_once: true
+  ec2_vpc_net_facts:
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    region: "{{ ec2_region }}"
+    filters: "{{ vpc_id_filter }}"
+  register: ec2_vpc_id_facts
+  vars:
+    vpc_id_filter: "{{ ec2_vpc_id is defined | ternary({'vpc-id':ec2_vpc_id}, {}) }}"
+
+- assert:
+    msg: "VPC <> 1; ec2_vpc_id should be defined and valid as there are too many or not enough results"
+    that:
+     - "ec2_vpc_id_facts.vpcs | length > 0"
+     - "ec2_vpc_id_facts.vpcs | length == 1"
+
+- set_fact:
+    ec2_vpc_id: "{{ ec2_vpc_id_facts.vpcs.0.id }}"
+  when: ec2_vpc_id is not defined
+
+- name: lookup vpc subnets
+  run_once: true
+  ec2_vpc_subnet_facts:
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    region: "{{ ec2_region }}"
+    filters: "{{ vpc_subnet_filter }}"
+  vars:
+    vpc_subnet_filter: "{{ ec2_vpc_subnet is defined | ternary({'vpc-id':ec2_vpc_id,'subnet-id':ec2_vpc_subnet}, {'vpc-id':ec2_vpc_id}) }}"
+  register: ec2_vpc_subnet_facts
+
+- set_fact:
+    ec2_vpc_subnet: "{{ (ec2_vpc_subnet_facts.subnets | first).id }}"
+    ec2_vpc_subnet_cidr_block: "{{ (ec2_vpc_subnet_facts.subnets | first).cidr_block }}"
+  run_once: true
+
+- name: lookup current external IP
+  ignore_errors: true
+  run_once: true
+  uri:
+    url: "{{ ec2_api_getip_url }}"
+    headers:
+      x-api-key: "{{ ec2_api_getip_key }}"
+    return_content: true
+  register: current_ip
+
+- set_fact:
+    ec2_current_networks: "{{ ec2_mynetworks + [ current_ip.json.sourceIP | ipaddr('host') ] }}"
+  when: current_ip.json is defined and current_ip.json.sourceIP is defined and current_ip.json.sourceIP | length > 0
+    
+- name: ensure VPC Security Group is created
+  run_once: true
+  ec2_group:
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    region: "{{ ec2_region }}"
+    name: "{{ ec2_security_group_name }}"
+    description: Openshift Demo Security Group
+    tags: "{{ ec2_security_group_tags }}"
+    vpc_id: "{{ ec2_vpc_id }}"
+    purge_rules: true
+    purge_rules_egress: true
+    rules: "{{ text_rules | from_yaml }}"
+  vars:
+    text_rules: |
+      - proto: all
+        from_port: 0
+        to_port: 65535
+        cidr_ip: {{ ec2_vpc_id_facts.vpcs.0.cidr_block }}
+      {% for nw in ec2_current_networks | default(ec2_mynetworks) %}
+      - proto: tcp
+        ports:
+          - 22
+          - 80
+          - 443
+          - 8443
+          - 8080
+        cidr_ip: "{{ nw }}"
+      {% endfor %}
+
+

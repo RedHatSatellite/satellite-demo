@@ -1,0 +1,7 @@
+resolv-file=/etc/dnsmasq.resolv
+address=/.{{ ( groups.satellites | first).split('.')[1:] | join('.') }}/{{ internal_ip }}
+{% for domain in dns_ignore_domains %}
+server=/{{ domain }}/
+{% endfor %}
+# Include all files in /etc/dnsmasq.d except RPM backup files
+conf-dir=/etc/dnsmasq.d,.rpmnew,.rpmsave,.rpmorig

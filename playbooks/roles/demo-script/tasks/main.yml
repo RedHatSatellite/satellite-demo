@@ -1,0 +1,41 @@
+# vim: ts=2 sw=2 expandtab ai
+---
+
+- block:
+    - debug:
+        var: msg
+      vars:
+        msg:
+          - "You need to give a step:"
+          - "0) build rpm"
+          - "1) publish performance - upload and publish rpm to satellite"
+          - "2) HA/LB Capsule - disable capsule1 and perform an update on client1"
+          - "3) content availability - shutdown master and install docker on client1 watch failed on client2"
+    - fail:
+        msg: "Please define a step to run this role: step1, step2, step3"
+  when:
+    - step | default('') not in [ 'step0', 'step1', 'step2', 'step3' ]
+  tags: [ step, step0, step1, step2, step3 ]
+
+- name: "ensure repos are enabled"
+  delegate_to: "{{ item }}"
+  subscription_repos:
+    repos: "{{ demo_repos }}"
+  with_items: "{{ groups.clients }}"
+  tags: [ step1, step2, step3 ]
+
+- include_tasks: step0_build.yml
+  when: step == 'step0'
+  tags: [ step0 ]
+
+- include_tasks: step1_publish.yml
+  when: step == 'step1'
+  tags: [ step1 ]
+
+- include_tasks: step2_ha_lb.yml
+  when: step == 'step2'
+  tags: [ step2 ]
+
+- include_tasks: step3_content_avail.yml
+  when: step == 'step3'
+  tags: [ step3 ]

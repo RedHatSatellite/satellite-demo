@@ -1,0 +1,157 @@
+---
+#vim ts=2 ts=2 ai extandtab
+# defaults file for satellite
+
+###
+# !!!!! OVERRIDE !!!!!
+# These you NEED to override one of these sections
+###
+# must override at least one of these
+#
+## shared: satellite_version: "6.3"
+# 99% of the time, the tools version is the same - unless we're testing QA builds
+## shared: satellite_tools_version: "{{ satellite_version }}"
+# must override a user/pass or...
+satellite_rhsm_user: ""
+satellite_rhsm_pass: ""
+# or must supply a manifest file
+satellite_manifest_file: ""
+###
+# END OF OVERRIDE
+###
+
+###
+# +++++ OPTIONAL +++++
+# These you MIGHT want to customize
+###
+# Subscriptions used for Activation Key
+satellite_subscription_ak: [ "Red Hat Enterprise Linux Server with Smart Management, Premium (Physical or Virtual Nodes)" ]
+# entries that could be customize for the satellite install
+## shared: satellite_user: admin
+## shared: satellite_pass: redhat123
+## shared: satellite_default_location: LocalNet
+## shared: satellite_default_organization: "Demo{{ satellite_version }}"
+
+# the baseurl for the local network pulp mirror that will be
+# setup as a pulp alternative source
+pulp_mirror: ""
+
+# if you want to configure the repo filters and promote them to environment lifecycles
+# change this to true, but BEWARE! It will run EVERY TIME you run the playbook
+satellite_hammer_configure_CV_filters: false
+###
+# END OF OPTIONAL
+###
+
+###
+# non-customize.yml
+# ????? NON-CUSTOMIZE ?????
+# You shouldn't need to customize anything in here
+###
+# need to know ourselves
+## sahred: satellite_server: "{{ groups['satellites'][0] }}"
+## sahred: satellite_server_ip: "{{ lookup('gethostbyname', hostvars[satellite_server].ansible_host) }}"
+## sahred: satellite_server_hostname: "{{ hostvars[satellite_server].inventory_hostname }}"
+# where the role will put the manifest file for upload
+satellite_manifest_file_dest: "/tmp/manifest.zip"
+
+satellite_enable_discovery: true
+satellite_enable_tftp: true
+
+# the packages that the satellite server needs
+# the meta dependencies makes sure that this is set
+# for the rhel role:
+satellite_repos:
+  - rhel-7-server-rpms
+  - rhel-server-rhscl-7-rpms
+  - "rhel-7-server-satellite-{{ satellite_version }}-rpms"
+
+# packages that satellite needs in order to run the installer
+satellite_packages: |
+  [ "satellite", "bind-utils", "pulp-admin-client", "pulp-rpm-admin-extensions", "vim",
+  {% if satellite_enable_discovery == True %}"foreman-discovery-image"{% endif %}
+  ]
+
+# variables needed for hammer
+# the views
+# 1st one is for testing and demoing errata - it's small
+# 2nd one is always the kickstart
+# 3rd is just a RHEL7 base
+# 4th is for capsule servers
+# the rest are whatever you want
+satellite_hammer_views:
+- name: "NoDocker"
+  repos: [ "extras" ]
+  ak: "RHEL7-DEMO"
+  override: [ ]
+  varname: "NoDocker"
+  ak_product_ids: [ ]
+- name: "RHEL7-Server-Kickstart"
+  repos: [ "kickstart" ]
+  ak: ""
+  override: [ ]
+  varname: "RHEL7ServerKickstart"
+  ak_product_ids: [ ]
+- name: "RHEL7-Server"
+  repos: [ "extras", "sattools", "rhcommon", "base", "kickstart" ]
+  ak: "RHEL7-BASE"
+  override: [ "rhel-7-server-satellite-tools-{{ satellite_tools_version }}-rpms" ]
+  varname: "RHEL7Server"
+  ak_product_ids: [ "RH00002", "RH00003" ]
+- name: "RHEL7-Capsule"
+  repos: [ "rhscl", "base", "capsule", "sattools" ]
+  ak: "RHEL7-CAPSULE"
+  override:
+    - "rhel-server-rhscl-7-rpms"
+    - "rhel-7-server-satellite-capsule-{{ satellite_version }}-rpms"
+    - "rhel-7-server-satellite-tools-{{ satellite_tools_version }}-rpms"
+  varname: "RHEL7Capsule"
+  ak_product_ids: [ "SVC3124", "MCT3718" ]
+satellite_hammer_product: "Red Hat Enterprise Linux Server"
+satellite_hammer_basearch: "x86_64"
+satellite_hammer_release: "7Server"
+satellite_hammer_ks_release: "7.5"
+
+# shortcuts vars to make hammer easier to call
+# the CV is the demo CV
+## shared: CV: "{{ satellite_hammer_views.0.name }}"
+## shared: ORG: "--organization='{{ satellite_default_organization }}'"
+## shared: _ORG: "{{ satellite_default_organization }}"
+## shared: LOC: "{{ satellite_default_location }}"
+PROD: "{{ satellite_hammer_product }}"
+CAP_PROD: "Red Hat Satellite Capsule"
+CL_PROD: "Red Hat Software Collections for RHEL Server"
+BASEARCH: "{{ satellite_hammer_basearch }}"
+RELEASE: "{{ satellite_hammer_release }}"
+KS_RELEASE: "{{ satellite_hammer_ks_release }}"
+
+# Satellite hammer repos
+# kickstart is always first
+SAT_MAP:
+  kickstart: [ "Red Hat Enterprise Linux 7 Server (Kickstart)", "Red Hat Enterprise Linux 7 Server Kickstart {{ BASEARCH }} {{ KS_RELEASE }}" ]
+  extras: [ "Red Hat Enterprise Linux 7 Server - Extras (RPMs)", "Red Hat Enterprise Linux 7 Server - Extras RPMs {{ BASEARCH }}" ] 
+  sattools: [ "Red Hat Satellite Tools {{ satellite_tools_version }} (for RHEL 7 Server) (RPMs)", "Red Hat Satellite Tools {{ satellite_tools_version }} for RHEL 7 Server RPMs {{ BASEARCH }}" ]
+  rhcommon: [ "Red Hat Enterprise Linux 7 Server - RH Common (RPMs)", "Red Hat Enterprise Linux 7 Server - RH Common RPMs {{ BASEARCH }} {{ RELEASE }}" ]
+  base: [ "Red Hat Enterprise Linux 7 Server (RPMs)", "Red Hat Enterprise Linux 7 Server RPMs {{ BASEARCH }} {{ RELEASE }}" ]
+  capsule: [ "Red Hat Satellite Capsule 6.3 (for RHEL 7 Server) (RPMs)", "Red Hat Satellite Capsule 6.3 for RHEL 7 Server RPMs {{ BASEARCH }}" ]
+  rhscl: [ "Red Hat Software Collections RPMs for Red Hat Enterprise Linux 7 Server", "Red Hat Software Collections RPMs for Red Hat Enterprise Linux 7 Server {{ BASEARCH }} {{ RELEASE }}" ]
+
+satellite_hammer_repos:
+  - { product: "{{ PROD }}", release: "{{ KS_RELEASE }}", basearch: "{{ BASEARCH }}", name: "{{SAT_MAP.kickstart.0}}", test: "{{SAT_MAP.kickstart.1}}" }
+  - { product: "{{ PROD }}", release: ""                , basearch: "{{ BASEARCH }}", name: "{{SAT_MAP.extras.0}}"   , test: "{{SAT_MAP.extras.1}}" }
+  - { product: "{{ PROD }}", release: ""                , basearch: "{{ BASEARCH }}", name: "{{SAT_MAP.sattools.0}}" , test: "{{SAT_MAP.sattools.1}}" }
+  - { product: "{{ CAP_PROD}}", release: ""             , basearch: "{{ BASEARCH }}", name: "{{SAT_MAP.capsule.0}}"  , test: "{{SAT_MAP.capsule.1}}" }
+  - { product: "{{ CL_PROD}}", release: "{{ RELEASE }}" , basearch: "{{ BASEARCH }}", name: "{{SAT_MAP.rhscl.0}}"    , test: "{{SAT_MAP.rhscl.1}}" }
+  - { product: "{{ PROD }}", release: "{{ RELEASE }}"   , basearch: "{{ BASEARCH }}", name: "{{SAT_MAP.rhcommon.0}}" , test: "{{SAT_MAP.rhcommon.1}}" }
+  - { product: "{{ PROD }}", release: "{{ RELEASE }}"   , basearch: "{{ BASEARCH }}", name: "{{SAT_MAP.base.0}}"     , test: "{{SAT_MAP.base.1}}" }
+
+# environments for content views
+satellite_hammer_environments:
+  - { name: "Development", description: "Development Testing Team", prior: "Library" }
+  - { name: "Testing", description: "Quality Engineering Team", prior: "Development" }
+  - { name: "Production", description: "Product Releases", prior: "Testing" }
+
+# satellite filter rules for the main content view
+filter_rules: 
+  - { name: 'exclude of rpm by docker', type: 'rpm', package: 'docker', includes: false, date: '{{ cvv_date }}' }
+  - { name: 'exclude of erratum by date', type: 'erratum', package: null, includes: false, date: '{{ cvv_date }}' }

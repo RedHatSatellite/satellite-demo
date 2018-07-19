@@ -1,0 +1,33 @@
+# vim: ts=2 sw=2 expandtab ai
+---
+- name: ensure /etc/haproxy exists
+  file:
+    path: /etc/haproxy
+    state: directory
+    owner: root
+    group: root
+    follow: true
+    mode: 0755
+
+- name: copy haproxy.cfg
+  template:
+    src: templates/haproxy.cfg.j2
+    dest: /etc/haproxy/haproxy.cfg
+  notify:
+    - restart haproxy
+
+- name: copy haproxy services file
+  template:
+    src: haproxy.service.j2
+    dest: /etc/systemd/system/haproxy.service
+  notify:
+    - restart haproxy
+
+- meta: flush_handlers
+
+- name: ensure haproxy has started
+  systemd:
+    name: haproxy
+    state: started
+    daemon_reload: true
+    enabled: true

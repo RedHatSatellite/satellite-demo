@@ -1,0 +1,6 @@
+# vim: ts=2 sw=2 expandtab ai
+---
+
+- name: Ensure dns is working
+  command: /usr/bin/ping -c 2 www.google.com.
+  changed_when: false

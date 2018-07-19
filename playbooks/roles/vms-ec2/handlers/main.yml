@@ -1,0 +1,32 @@
+# vim: ts=2 sw=2 expandtab ai
+---
+
+- name: Wait for SSH to come up
+  wait_for:
+    host: "{{ ansible_host }}"
+    port: 22
+    delay: 15
+    state: started
+
+- name: ensuring hosts are up
+  ping:
+  register: ping
+  until: ping is success
+  retries: 10
+  delay: 1
+  ignore_errors: no
+  listen: Wait for SSH to come up
+
+- name: pausing 20 secs to let network settle
+  pause:
+    seconds: 20
+  listen: Wait for SSH to come up
+
+- name: ping hosts again
+  ping:
+  register: ping
+  until: ping is success
+  retries: 10
+  delay: 1
+  ignore_errors: no
+  listen: Wait for SSH to come up

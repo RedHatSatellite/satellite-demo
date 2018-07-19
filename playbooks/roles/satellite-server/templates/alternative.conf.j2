@@ -1,0 +1,13 @@
+[backup-pulp]
+enabled: 1
+priority: 0
+expires: 7d
+name: Backup Pulp
+type: yum
+base_url: {{ pulp_mirror }}
+paths: content/dist/rhel/server/7/7Server/x86_64/os \
+ content/dist/rhel/server/7/7Server/x86_64/kickstart \
+ content/dist/rhel/server/7/7Server/x86_64/rh-common/os \
+ content/dist/rhel/server/7/7Server/x86_64/extras/os \
+ content/dist/rhel/server/7/7Server/x86_64/sat-tools/{{ satellite_tools_version }}/os
+max_concurrent: 10

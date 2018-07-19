@@ -1,0 +1,17 @@
+# vim: ts=2 sw=2 expandtab ai
+---
+
+- name: Configure satellite clients
+  any_errors_fatal: true
+  force_handlers: true
+  hosts: clients
+  gather_facts: true
+  connection: smart
+  vars:
+    satellite_subscription_ak: RHEL7-BASE,Demo
+    satellite_subscription_hg: RHEL7-Server/Demo
+    satellite_skip_puppet: true
+    subscription_ak: ignore
+    subscription_register: false
+  roles:
+    - satellite-client

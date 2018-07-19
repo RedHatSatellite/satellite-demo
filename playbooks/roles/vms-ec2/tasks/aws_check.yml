@@ -1,0 +1,16 @@
+# vim: ts=2 sw=2 expandtab ai
+---
+- name: read in AWS_ACCESS_KEY and AWS_SECRET_KEY from environment if not defined
+  run_once: true
+  set_fact:
+    aws_access_key: "{{ lookup('env', 'AWS_ACCESS_KEY') }}"
+    aws_secret_key: "{{ lookup('env', 'AWS_SECRET_KEY') }}"
+  when: aws_access_key is not defined and aws_secret_key is not defined
+
+- assert:
+    msg: aws_access_key and aws_secret_key must be defined for this role
+    that:
+    - "aws_access_key | trim | length > 0"
+    - "aws_secret_key | trim | length > 0"
+  run_once: true
+

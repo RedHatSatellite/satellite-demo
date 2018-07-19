@@ -1,0 +1,42 @@
+---
+# vim: sw=2 ts=2 ai expandtab
+
+- name: "Provisioning|Cleanup | Get list of all Redhat partition tables belonging to Org: {{ satellite_default_organization }}"
+  command: "/usr/bin/hammer --output=json partition-table list --organization='{{ satellite_default_organization }}' --search=family=Redhat"
+  register: org_partition
+  changed_when: false
+
+- name: "Provisioning|Cleanup | Get list of all Redhat partition tables belonging to Loc: {{ satellite_default_location }}"
+  command: "/usr/bin/hammer --output=json partition-table list --location='{{ satellite_default_location }}' --search=family=Redhat"
+  register: loc_partition
+  changed_when: false
+
+- name: "Provisioning|Cleanup | Get list of all Redhat partition tables"
+  command: "/usr/bin/hammer --output=json partition-table list --search=family=Redhat"
+  register: all_partition
+  changed_when: false
+
+- name: "Provisioning|Cleanup | Merging lists to dict/list"
+  set_fact:
+    partition_map: "{{ dict( all_list | json_query('[*][Id, Name]')) }}"
+    partition_list: "{{ org_list | map(attribute='Name') | list | intersect(loc_list | map(attribute='Name') | list) }}"
+  vars:
+    org_list: "{{ org_partition.stdout | from_json | list }}"
+    loc_list: "{{ org_partition.stdout | from_json | list }}"
+    all_list: "{{ all_partition.stdout | from_json | list }}"
+
+- name: "Provisioning|Cleanup | Adding items that are in the Redhat partition list, but not associated to org/loc"
+  set_fact:
+    partition_map: "{{ [ item.key, item.value ] }}"
+  when: item.value not in partition_list
+  with_dict: "{{ partition_map }}"
+  register: tmp
+
+- name: "Provisioning|Cleanup | coerce partition_map of results of array of arrays into dict"
+  set_fact:
+    partition_map: "{{ dict( tmp.results | map(attribute='ansible_facts') | select('defined') | map(attribute='partition_map') | list) }}"
+
+- name: "Provisioning|Cleanup | Easy Way: Trying to add location and organization directly"
+  command: "/usr/bin/hammer partition-table update --id {{ item.key }} --locations='{{ satellite_default_location }}' --organizations='{{ satellite_default_organization }}'"
+  register: add_direct
+  with_dict: "{{ partition_map }}"

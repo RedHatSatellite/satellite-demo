@@ -1,0 +1,41 @@
+# vim: ts=2 sw=2 expandtab ai
+---
+- name: ensure ~/.ssh dir exists
+  run_once: true
+  file:
+    path: "{{ sshconfig_path | dirname }}"
+    mode: 0700
+    state: directory
+
+- name: ensure ~/.ssh/config file exists
+  run_once: true
+  copy:
+    dest: "{{ sshconfig_path }}"
+    content: ''
+    mode: 0640
+    force: false
+
+- name: removing from ssh config
+  when: sshconfig_clean
+  run_once: true
+  blockinfile:
+    marker: "# {mark} SAT-DEMO MANAGED BLOCK"
+    path: "{{ sshconfig_path }}"
+    state: absent
+
+- name: adding to ssh config
+  when: not sshconfig_clean
+  run_once: true
+  blockinfile:
+    marker: "# {mark} SAT-DEMO MANAGED BLOCK"
+    path: "{{ sshconfig_path }}"
+    block: |
+      {% for hn in play_hosts %}
+      {% if hostvars[hn].public_ip | default('') | length > 0 %}
+      Host {{ hn }} {{ hostvars[hn].hostname }} {{ hostvars[hn].public_ip }} {{ hostvars[hn].internal_ip }}
+        Hostname {{ hostvars[hn].public_ip }}
+        UserKnownHostsFile /dev/null
+        StrictHostKeyChecking no
+        User {{ ansible_user }}
+      {% endif %}
+      {% endfor %}

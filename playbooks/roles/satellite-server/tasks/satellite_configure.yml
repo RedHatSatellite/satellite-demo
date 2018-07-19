@@ -1,0 +1,25 @@
+---
+# vim: sw=4 ts=102 ai
+
+- name: check if satellite is answering
+  uri:
+      url: "https://{{ hostname }}/api/organizations"
+      user: "{{ satellite_user }}"
+      password: "{{ satellite_pass }}"
+      force_basic_auth: yes
+  register: satellite_is_installed
+  ignore_errors: yes
+
+- name: install satellite
+  shell: |
+      satellite-installer --scenario satellite -v --force \
+      --foreman-initial-location {{ satellite_default_location }} \
+      --foreman-initial-organization {{ satellite_default_organization }} \
+      --foreman-admin-username {{ satellite_user }} \
+      --foreman-admin-password {{ satellite_pass }} \
+      --foreman-proxy-tftp true \
+      --foreman-plugin-discovery-install-images true \
+      --capsule-puppet true \
+      --foreman-proxy-puppetca true \
+      --enable-foreman-plugin-discovery
+  when: "{{ satellite_is_installed.failed | default(False) or satellite_is_installed.status != 200 }}"

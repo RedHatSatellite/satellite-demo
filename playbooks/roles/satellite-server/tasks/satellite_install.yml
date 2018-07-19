@@ -1,0 +1,67 @@
+---
+# vim: sw=2 ts=102 ai
+
+- name: "install: install satellite"
+  shell: |
+    satellite-installer --scenario satellite -v \
+    --foreman-initial-location {{ satellite_default_location }} \
+    --foreman-initial-organization {{ satellite_default_organization }} \
+    {% if satellite_enable_tftp %}--foreman-proxy-tftp true {% endif %} \
+    {% if satellite_enable_discovery %}--foreman-plugin-discovery-install-images true {% endif %} \
+    --foreman-admin-username {{ satellite_user }} \
+    --foreman-admin-password {{ satellite_pass }}
+  when: not satellite_is_installed
+
+- set_fact:
+    satellite_is_installed: true
+  when: not satellite_is_installed
+
+- name: "install: create hammer auth directory"
+  file:
+    path: ~/.hammer
+    state: directory
+    mode: 0755
+
+- name: "install: copy configuration for hammer"
+  template:
+    src: hammer_cli_config.yml.j2
+    dest: ~/.hammer/cli_config.yml
+
+- name: "install: create /usr/local/bin"
+  file:
+    path: /usr/local/bin
+    state: directory
+    mode: 0755
+
+- name: "install: copy pulp-admin helper script"
+  copy:
+    src: pulp-admin.sh
+    dest: /usr/local/bin/pulp-admin.sh
+    mode: 0755
+    owner: root
+    group: root
+
+- name: "install: check if semaphore file exists"
+  command: /usr/bin/true
+  args:
+    creates: /etc/pulp/content/sources/synced.flag
+  register: check_alt_sync
+
+- name: "install: copy alternative sources if defined"
+  template:
+    src: alternative.conf.j2
+    dest: /etc/pulp/content/sources/conf.d/alternative.conf
+  register: copy_alt_sources
+  when: |
+    pulp_mirror is defined and pulp_mirror != ""
+
+- name: "install: kick off index of pulp alternative sources"
+  command: /usr/local/bin/pulp-admin.sh content sources refresh --bg
+  when: copy_alt_sources.changed or check_alt_sync.changed
+
+- name: "install: add semaphore file so we know it was sync'd"
+  file:
+    path: /etc/pulp/content/sources/synced.flag
+    state: touch
+    mode: 0644
+  when: copy_alt_sources.changed or check_alt_sync.changed

@@ -1,0 +1,80 @@
+; all the hosts that are in the demo
+; vim: filetype=dosini
+[demo:children]
+ovirt
+ec2
+
+[ec2:vars]
+ec2_demo_tag=test-satellite1
+
+[ovirt]
+
+; hosts that are in AWS 
+[ec2:children]
+dns
+clients
+capsules
+satellites
+
+[satellites]
+satellite
+
+[capsules]
+capsule[1:2]
+
+[dns]
+dns1
+
+[clients]
+client1
+client2 satellite_server='{{ groups.satellites | first }}' satellite_url=
+client3 private_ip_start=35
+
+[dns:vars]
+subscription_ak=
+ec2_instance_type=t2.small
+rhel_extras_repo=rhui-REGION-rhel-server-extras
+ec2_volumes={{ default_ec2_volumes }}
+docker_storage_dev=/dev/xvdb
+
+[clients:vars]
+subscription_ak=
+ec2_instance_type=t2.small
+satellite_server={{ groups.dns | first }}
+satellite_url=https://{{ satellite_server_hostname }}:8443
+
+[capsules:vars]
+ec2_volume_sizes=[ 128, 0 ]
+ec2_instance_type=m5d.large
+subscription_ak=
+satellite_smartproxy={{ groups.dns | first }}
+
+[satellites:vars]
+ec2_volume_sizes=[ 256, 0 ]
+ec2_instance_type=m5d.xlarge
+subscription_ak=SATELLITE-DEMO-SATELLITE
+rhel_updates=True
+satellite_version=6.3
+satellite_rhsm_user=
+satellite_manifest_file=/tmp/install/manifest.zip
+satellite_default_organization=Gonoph
+satellite_default_location=Home
+satellite_enable_tftp=False
+satellite_enable_discovery=False
+satellite_subnets=[ [ "{{ ec2_vpc_subnet_cidr_block}}", "{{ ec2_vpc_subnet_cidr_block | ipaddr('subnet') | ipaddr(1) | ipaddr('address') }}" ] ]
+
+[ec2:vars]
+ec2_volumes={{ default_ec2_volumes[0:1] }}
+ansible_user=ec2-user
+private_ip_start=80
+private_ip="{{ ec2_vpc_subnet_cidr_block | ipaddr(private_ip_start + groups['ec2'].index(inventory_hostname)) | ipaddr('address') }}"
+hostname="{{ inventory_hostname }}.example.com"
+
+# the following is RHEL 7.5 2018-03-22 in us-east-1 via Cloud Access (recommended)
+ec2_ami_image=ami-0d70a070
+# put your network here, but it will look up your current IP
+# ec2_mynetworks=[ ]
+# subnet will be picked from 1st subnet found in VPC if not defined
+# ec2_vpc_subnet=subnet-ffffffff
+# if you only have one VPC, then it will be selected, otherwise, define it here
+# ec2_vpc_id=vpc-fffffff

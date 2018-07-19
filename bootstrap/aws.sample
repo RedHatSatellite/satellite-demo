@@ -1,0 +1,6 @@
+#!/bin/sh
+
+# these are just random, but replace with your data
+export AWS_ACCESS_KEY=LJRNTC85FK3HKOQBWKOX
+export AWS_SECRET_KEY=HW492I0TXa5dmQGpNxQi4Lm6g9WUyoE2kvMmzl8E
+export SUBSCRIPTION_ORG=123123

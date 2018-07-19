@@ -1,0 +1,145 @@
+---
+# vim: sw=2 ai expandtab
+
+- name: "Provisioning | get current Host Groups"
+  command: "/usr/bin/hammer --output json hostgroup list {{ ORG_ID }}"
+  register: hammer_output
+  changed_when: false
+
+- name: "Provisioning | convert output to json"
+  set_fact:
+    hammer_output: "{{ hammer_output.stdout | from_json }}"
+
+- name: "Provisioning | Check if HGs have been created"
+  set_fact:
+    ti: dummy
+  register: hg_check
+  when: item.ak # we only create HG for entires that have AK
+  changed_when: |
+    item.name not in hammer_output | map(attribute='Name')
+  with_items: "{{ satellite_hammer_views }}"
+  loop_control:
+    label: "HG={{ item.name }}"
+
+- name: "Provisioning | hg_check variable fix"
+  set_fact:
+    hg_check:
+      results: []
+      changed: false
+      skipped: true
+  when: hg_check is not defined
+  tags: [ always ]
+
+# only do this block when HG need to be created
+- block:
+###
+# Looking for medium for kickstarts
+###
+  - name: "Provisioning | Locate kickstart label"
+    command: "/usr/bin/hammer --output json repository info {{ ORG_ID }} --product '{{PROD}}' --name '{{SAT_MAP.kickstart.1}}'"
+    register: hammer_output
+    changed_when: false
+
+  - name: "Provisioning | Save repository label for search"
+    set_fact:
+      kickstart_label: "{{ (hammer_output.stdout | from_json).Label }}"
+
+  - name: "Provisioning | Locate medium for kickstart"
+    command: "/usr/bin/hammer --output json medium list --search '{{ kickstart_label }}'"
+    register: hammer_output
+    changed_when: (hammer_output.stdout | from_json) | list | length == 0
+
+  - block:
+    # only do this block when the medium was found
+    - name: "Provisioning | Save kickstart medium id"
+      set_fact:
+        medium_id: "{{ hammer_output.stdout | from_json | map(attribute='Id') | list | first }}"
+    ###
+    # Find OS from medium
+    ###
+    - name: "Provisioning | Looking up OS from medium" 
+      command: "/usr/bin/hammer --output json medium info --id '{{ medium_id }}'"
+      register: to
+      changed_when: false
+
+    - name: "Provisioning | Saving 1st OS from medium"
+      set_fact:
+        os_id: "{{ ((to.stdout | from_json)['Operating systems'] | sort(attribute='title') | last).id }}"
+
+    when: not hammer_output.changed
+
+  # do this when medium is not found
+  - block:
+      - include: satellite_helper_callsatellite.yml
+        vars:
+          call_name: "get CV id"
+          call_api: "/katello/api/organizations/{{ org_id }}/content_views?search=name={{ item.item.name | urlencode}}"
+          call_var: "{{ item.item.varname }}"
+        when: item.changed
+        with_items: "{{ hg_check.results }}"
+      - name: "Provisioning | Set CV id map"
+        set_fact:
+          cv_map: "{{ [ item.item.name, hostvars[inventory_hostname][item.item.varname].json | json_query('results[0].id') ] }}"
+          cvv_map: "{{[ item.item.name, hostvars[inventory_hostname][item.item.varname].json | json_query(querystr) ]}}"
+        when: item.changed
+        with_items: "{{ hg_check.results }}"
+        register: tmp
+        vars:
+          querystr: "results[0].versions[?contains(environment_ids, `{{ library_id }}`)] | [0].id"
+      - name: "Provisioning | coerce CV map arrays into dict"
+        set_fact:
+          cv_map: "{{ dict( tmp.results | map(attribute='ansible_facts') | select('defined')  | map(attribute='cv_map') | list) }}"
+          cvv_map: "{{ dict( tmp.results | map(attribute='ansible_facts') | select('defined') | map(attribute='cvv_map') | list) }}"
+      - include: satellite_helper_callsatellite.yml
+        vars:
+          call_name: "get kickstart repo id"
+          call_api: "/katello/api/organizations/1/environments/{{ org_id }}/repositories?search=distribution_bootable=true&content_view_version_id={{ cvv_map[item.item.name] | default(0) }}"
+          call_var: "{{ item.item.varname }}"
+        when: item.changed
+        with_items: "{{ hg_check.results }}"
+      - name: "Provisioning | Set kickstart repo id map"
+        set_fact:
+          ks_repo_map: "{{ [ item.item.name, hostvars[inventory_hostname][item.item.varname].json.results | map(attribute='id') | first | default(0) ] }}"
+        when: item.changed
+        with_items: "{{ hg_check.results }}"
+        register: tmp
+      - name: "Provisioning | coerce kickstart repo id map arrays into dict"
+        set_fact:
+          ks_repo_map: "{{ dict( tmp.results | map(attribute='ansible_facts') | select('defined') | map(attribute='ks_repo_map') | list) }}"
+
+    when: hammer_output.changed
+
+  when: hg_check.changed
+
+- name: variable sanity
+  set_fact:
+    ks_repo_map: {}
+  when: ks_repo_map is not defined
+
+###
+# Hostgroup Creation
+###
+# I left out the subnet and password on purpose
+- name: "Provisioning | Create HG if needed"
+  command: "/usr/bin/hammer hostgroup create {{ params }}"
+  when: item.changed
+  with_items: "{{ hg_check.results }}"
+  loop_control:
+    label: "/usr/bin/hammer hostgroup create {{ params }}"
+  vars:
+    params: >-
+      --name={{ item.item.name | quote }}
+      --organization-ids={{ org_id }}
+      --architecture={{ satellite_hammer_basearch }}
+      --domain-id=1
+      {% if medium_id is defined %}--medium-id={{ medium_id | default(0) }}{% endif %}
+      --operatingsystem-id={{ os_id }}
+      --partition-table='Kickstart default'
+      --puppet-ca-proxy-id=1
+      {% if (ks_repo_map[item.item.name] | default(0)) > 0 %}--kickstart-repository-id={{ ks_repo_map[item.item.name] }}{%endif%}
+      --lifecycle-environment-id={{ library_id }}
+      --environment-id=1
+      --content-source-id=1
+      --content-view={{ item.item.name | quote}}
+      --pxe-loader='PXELinux BIOS'
+      --query-organization-id={{ org_id }}

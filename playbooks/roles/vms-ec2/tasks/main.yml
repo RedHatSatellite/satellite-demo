@@ -1,0 +1,13 @@
+# vim: ts=2 sw=2 expandtab ai
+---
+- name: check AWS variables
+  include_tasks: aws_check.yml
+  tags: [ec2, ec2_network, ec2_create]
+
+- name: lookup VPC or subnets, and define Security Group
+  include_tasks: vpc_subnet_sg.yml
+  tags: [ec2, ec2_network]
+
+- name: create or clean instances
+  include_tasks: ec2_instances.yml
+  tags: [ec2, ec2_create]

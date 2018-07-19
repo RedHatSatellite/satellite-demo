@@ -1,0 +1,9 @@
+# vim: ts=2 sw=2 expandtab ai
+---
+ec2_tags:
+  Name: '{{ inventory_hostname }}'
+  demo: "{{ ec2_demo_tag }}"
+
+ec2_security_group_tags:
+  Name: "{{ ec2_security_group_name }}"
+  demo: "{{ ec2_demo_tag }}"

@@ -1,0 +1,15 @@
+# vim: ts=2 sw=2 expandtab ai
+---
+easy_rsa_master_pki: "{{ demo_certificates }}/pki.master"
+easy_rsa_ocp_pki: "{{ demo_certificates }}/pki.cluster"
+easy_rsa_cmd: ./easy-rsa/easyrsa3/easyrsa
+easy_rsa_args: >-
+  --batch
+  --days=30
+  --dn-mode=org
+  --req-c=US
+  --req-st=NC
+  --req-city=Raleigh
+  --req-org=Openshift
+  --req-ou=Demo
+  --req-email=''

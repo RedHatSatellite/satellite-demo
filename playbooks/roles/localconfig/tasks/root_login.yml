@@ -1,0 +1,21 @@
+# vim: ts=2 sw=2 expandtab ai
+---
+
+- name: ensure root can login
+  connection: smart
+  become: true
+  register: root_login
+  copy:
+    src: "~{{ ansible_user }}/.ssh/authorized_keys"
+    dest: "/root/.ssh/authorized_keys"
+    remote_src: true
+    owner: root
+    group: root
+    mode: 0600
+  until: root_login is success
+  retries: 10
+  delay: 3
+
+- name: change ansible user to root
+  set_fact:
+    ansible_user: root

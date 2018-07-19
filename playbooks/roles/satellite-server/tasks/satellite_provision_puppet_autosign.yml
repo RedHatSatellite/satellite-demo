@@ -1,0 +1,15 @@
+---
+# vim: sw=2 ts=2 ai expandtab
+
+- name: Adding hosts to puppet autosign
+  run_once: true
+  blockinfile:
+    marker: "# {mark} SAT-DEMO MANAGED BLOCK"
+    path: /etc/puppet/autosign.conf
+    block: |
+      {% for hn in groups.all | sort %}
+      {{ hn }}
+      {% endfor %}
+      *.{{ inventory_hostname.split('.')[1:] | join('.') }}
+  notify:
+    - restart puppet

@@ -1,0 +1,7 @@
+---
+# vim: sw=2 ts=2 ai expandtab
+# handlers file for satellite
+- name: restart puppet
+  systemd:
+    name: puppet
+    state: restarted

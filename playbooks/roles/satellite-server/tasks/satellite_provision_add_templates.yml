@@ -1,0 +1,56 @@
+---
+# vim: sw=2 ts=2 ai expandtab
+
+- name: "Provisioning|Cleanup | Get list of all templates belonging to Org: {{ satellite_default_organization }}"
+  command: "/usr/bin/hammer --output=json template list --organization='{{ satellite_default_organization }}'"
+  register: org_templates
+  changed_when: false
+
+- name: "Provisioning|Cleanup | Get list of all templates belonging to Loc: {{ satellite_default_location }}"
+  command: "/usr/bin/hammer --output=json template list --location='{{ satellite_default_location }}'"
+  register: loc_templates
+  changed_when: false
+
+- name: "Provisioning|Cleanup | Get list of all templates"
+  command: "/usr/bin/hammer --output=json template list"
+  register: all_templates
+  changed_when: false
+
+- name: "Provisioning|Cleanup | Merging lists to dict/list"
+  set_fact:
+    template_map: "{{ dict( all_list | json_query('[*][Id, Name]')) }}"
+    template_list: "{{ org_list | map(attribute='Name') | list | intersect(loc_list | map(attribute='Name') | list) }}"
+  vars:
+    org_list: "{{ org_templates.stdout | from_json | list }}"
+    loc_list: "{{ loc_templates.stdout | from_json | list }}"
+    all_list: "{{ all_templates.stdout | from_json | list }}"
+
+- name: "Provisioning|Cleanup | Adding items that are in the ok_template_list, but not associated to org/loc"
+  set_fact:
+    template_map: "{{ [ item.key, item.value ] }}"
+  when: item.value in ok_template_list and item.value not in template_list
+  with_dict: "{{ template_map }}"
+  register: tmp
+
+- name: "Provisioning|Cleanup | coerce template_map of results of array of arrays into dict"
+  set_fact:
+    template_map: "{{ dict( tmp.results | map(attribute='ansible_facts') | select('defined') | map(attribute='template_map') | list) }}"
+
+- name: "Provisioning|Cleanup | Easy Way: Trying to add location and organization directly"
+  command: "/usr/bin/hammer template update --id {{ item.key }} --locations='{{ satellite_default_location }}' --organizations='{{ satellite_default_organization }}'"
+  register: add_direct
+  changed_when: add_direct.rc != 0
+  failed_when: add_direct.rc not in [0, 65]
+  with_dict: "{{ template_map }}"
+- name: "Provisioning|Cleanup | Hard Way: Associating location to template"
+  command: "/usr/bin/hammer location add-config-template --config-template-id {{ item.item.key }} --name '{{ satellite_default_location }}'"
+  when: add_direct.changed and item.changed
+  with_items: "{{ add_direct.results }}"
+  loop_control:
+    label: "{{ item.item.key }} => {{ item.item.value }}"
+- name: "Provisioning|Cleanup | Hard Way: Associating organization to template"
+  command: "/usr/bin/hammer organization add-config-template --config-template-id {{ item.item.key }} --name '{{ satellite_default_organization }}'"
+  when: add_direct.changed and item.changed
+  with_items: "{{ add_direct.results }}"
+  loop_control:
+    label: "{{ item.item.key }} => {{ item.item.value }}"
