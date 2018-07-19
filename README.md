@@ -22,55 +22,55 @@ Demo that exist behind a jump box using internal non-public networks. It does
 the following actions:
 
 1. Creates a bunch of VMs on AWS
-..1. dns/haproxy for our fake domains and LB/HA stuff to work.
-..2. satellite server VM [based on the install recommendations][1]
-..3. two satellite capsule VMs in HA/LB mode [as detailed in the upstream foreman][2]
-..4. two client VMs
+   1. dns/haproxy for our fake domains and LB/HA stuff to work.
+   2. satellite server VM [based on the install recommendations][1]
+   3. two satellite capsule VMs in HA/LB mode [as detailed in the upstream foreman][2]
+   4. two client VMs
 2. Configures the local install environment
-..1. Creates a new inventory file that is AWS/GCE agnostic
-..2. updates the local ssh config for easy ssh access
+   1. Creates a new inventory file that is AWS/GCE agnostic
+   2. updates the local ssh config for easy ssh access
 3. Configures the dns node
-..1. haproxy, dnsmasq
-..2. Adds all the hosts in the demo for dns to work
+   1. haproxy, dnsmasq
+   2. Adds all the hosts in the demo for dns to work
 4. Configures the satellite server
-..1. installs all the packages and configures the firewall
-..2. runs the satellite installer and starts satellite
-..3. copies or downloads the manifest from the Red Hat Portal
-..4. enables all the demo repos and sets them for `on-download` for deferred downloads
-..5. synchronizes the repos
-..6. defines the demo content-views, adds all their repos, and publishes 1st version
-..7. defines the demo lifecycle environments
-..8. *optional* defines filters for one demo view, publishes, promotes them to environments, with one-month increment filters
-..9. sets up the system with sane provisioning values:
-....* activiation keys
-....* hostgroups, subnets
-....* attaching subscriptions
-....* remastering the pxe-less discovery iso for automatic discovery
-..10. cleans up the templates by removing ones we don't use
+   1. installs all the packages and configures the firewall
+   2. runs the satellite installer and starts satellite
+   3. copies or downloads the manifest from the Red Hat Portal
+   4. enables all the demo repos and sets them for `on-download` for deferred downloads
+   5. synchronizes the repos
+   6. defines the demo content-views, adds all their repos, and publishes 1st version
+   7. defines the demo lifecycle environments
+   8. *optional* defines filters for one demo view, publishes, promotes them to environments, with one-month increment filters
+   9. sets up the system with sane provisioning values:
+      1. activiation keys
+      2. hostgroups, subnets
+      3. attaching subscriptions
+      4. remastering the pxe-less discovery iso for automatic discovery
+  10. cleans up the templates by removing ones we don't use
 5. Configures the Capsules
-..1. registers them to the satellite
-..2. generates the certificates
-..3. installs the capsule packaegs and configures the firewall
-..4. runs the capsule installer and starts the capsule process
-..5. assigns the lifecycle environments to the capsules
-..6. assigns capsules to default org and loc, sets download polciy to inherit from repo
-..7. force content synchronization on capsules that haven't been
+   1. registers them to the satellite
+   2. generates the certificates
+   3. installs the capsule packaegs and configures the firewall
+   4. runs the capsule installer and starts the capsule process
+   5. assigns the lifecycle environments to the capsules
+   6. assigns capsules to default org and loc, sets download polciy to inherit from repo
+   7. force content synchronization on capsules that haven't been
 6. Post-configuration: configures the demo settings
-..1. turns extras repo to immediate download
-..2. install rpm-devel on satellite to create `demoapp`
-..3. create Demo product:
-....1. Create Demo product and repo
-....2. Create Demo App Content View
-....3. Create Demp Comp Composite View
-....4. Add Demo App and RHEL-7Server Content Views to the Demo Comp Compsite View
-....5. Publish Demo CV's if needed
-....6. Create Activation Key for Demo Product
-....7. Assign Demo product to AK
-....8. Create the Demo Host Group
-....9. Wait for caspules to finish sync'ing the changes if needed
+   1. turns extras repo to immediate download
+   2. install rpm-devel on satellite to create `demoapp`
+   3. create Demo product:
+      1. Create Demo product and repo
+      2. Create Demo App Content View
+      3. Create Demp Comp Composite View
+      4. Add Demo App and RHEL-7Server Content Views to the Demo Comp Compsite View
+      5. Publish Demo CV's if needed
+      6. Create Activation Key for Demo Product
+      7. Assign Demo product to AK
+      8. Create the Demo Host Group
+      9. Wait for caspules to finish sync'ing the changes if needed
 7. Configures the clients
-..1. registers them to the satellite or capsule LB/HA endpoint
-..2. assigns a HG and gives them subscriptions via the AK
+   1. registers them to the satellite or capsule LB/HA endpoint
+   2. assigns a HG and gives them subscriptions via the AK
 
 [1]: https://access.redhat.com/documentation/en/red-hat-satellite/6.3/paged/installation-guide/
 [2]: https://theforeman.org/2018/05/load-balanced-smart-proxies-with-haproxy.html
@@ -79,14 +79,14 @@ Requirements
 ------------
 
 1. Red Hat Subscriptions in [Cloud Access][3]
-..* Red Hat Enterprise Linux Server (will be running version 7)
-..* Satellite 6 Infrasture (included with Smart Mangement purchased after Mar 1st, 2018)
+   * Red Hat Enterprise Linux Server (will be running version 7)
+   * Satellite 6 Infrasture (included with Smart Mangement purchased after Mar 1st, 2018)
 2. A Satellite manifest.zip
-..* placed where this README.md is located. [Obtained from the portal][4]
+   * placed where this README.md is located. [Obtained from the portal][4]
 3. Your AWS and Satellite credentials in an environment file callsed `aws`:
-..* `AWS_ACCESS_KEY` - your AWS access key
-..* `AWS_SECRET_KEY` - your AWS secret key
-..* `SUBSCRIPTION_ORG` - your Satellite Org, so the activation keys work
+   * `AWS_ACCESS_KEY` - your AWS access key
+   * `AWS_SECRET_KEY` - your AWS secret key
+   * `SUBSCRIPTION_ORG` - your Satellite Org, so the activation keys work
 
 By Default, I'm using an activation key of `SATELLITE-DEMO-SATELLITE`, which you can [create on the portal][5].
 
