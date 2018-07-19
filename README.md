@@ -17,9 +17,10 @@ another is from me (Billy Holmes).
 Overview
 --------
 
-This colletions of roles will create a collection of systems for a Satellite 6
-Demo that exist behind a jump box using internal non-public networks. It does
-the following actions:
+This colletions of playbooks and roles will create a set of systems for a
+Satellite 6 Demo that use an example domain (example-dot-com) using a
+customized dns server, and an haproxy node to load balance the capsules. It
+does the following actions:
 
 1. Creates a bunch of VMs on AWS
    1. dns/haproxy for our fake domains and LB/HA stuff to work.
