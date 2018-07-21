@@ -38,6 +38,7 @@
     state: started
   when:
     - not sshconfig_clean
+  tags: [ localconfig ]
 
 - include_tasks: root_login.yml
   when: not sshconfig_clean
