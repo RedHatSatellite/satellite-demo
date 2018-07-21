@@ -28,7 +28,6 @@ dns1
 [clients]
 client1
 client2 satellite_server='{{ groups.satellites | first }}' satellite_url=
-client3 private_ip_start=35
 
 [dns:vars]
 subscription_ak=
@@ -39,19 +38,20 @@ docker_storage_dev=/dev/xvdb
 
 [clients:vars]
 subscription_ak=
+ec2_volume_sizes=[ 10, 0 ]
 ec2_instance_type=t2.small
 satellite_server={{ groups.dns | first }}
 satellite_url=https://{{ satellite_server_hostname }}:8443
 
 [capsules:vars]
 ec2_volume_sizes=[ 128, 0 ]
-ec2_instance_type=m5d.large
+ec2_instance_type=m5.large
 subscription_ak=
 satellite_smartproxy={{ groups.dns | first }}
 
 [satellites:vars]
 ec2_volume_sizes=[ 256, 0 ]
-ec2_instance_type=m5d.xlarge
+ec2_instance_type=m5.xlarge
 subscription_ak=SATELLITE-DEMO-SATELLITE
 rhel_updates=True
 satellite_version=6.3
