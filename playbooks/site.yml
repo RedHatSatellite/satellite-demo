@@ -1,4 +1,0 @@
-# vim: sw=2 ai ts=10240
----
-- include: create_vms.yml
-- include: configure_vms.yml
