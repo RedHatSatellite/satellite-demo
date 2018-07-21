@@ -45,7 +45,7 @@ satellite_url=https://{{ satellite_server_hostname }}:8443
 
 [capsules:vars]
 ec2_volume_sizes=[ 128, 0 ]
-ec2_instance_type=m5.large
+ec2_instance_type=m4.large
 subscription_ak=
 satellite_smartproxy={{ groups.dns | first }}
 
