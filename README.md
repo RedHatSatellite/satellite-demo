@@ -51,7 +51,7 @@ does the following actions:
 5. Configures the Capsules
    1. registers them to the satellite
    2. generates the certificates
-   3. installs the capsule packaegs and configures the firewall
+   3. installs the capsule packages and configures the firewall
    4. runs the capsule installer and starts the capsule process
    5. assigns the lifecycle environments to the capsules
    6. assigns capsules to default org and loc, sets download polciy to inherit from repo
