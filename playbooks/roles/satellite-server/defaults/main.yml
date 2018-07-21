@@ -17,7 +17,7 @@ satellite_rhsm_pass: ""
 satellite_manifest_file: ""
 # override the Activation Key subscription selection
 subscription_sku_rhel: RH00003
-subscription_sku_capsule: MCT3718
+subscription_sku_capsule: SVC3124
 ###
 # END OF OVERRIDE
 ###
@@ -134,6 +134,7 @@ satellite_hammer_views:
   varname: "RHEL7Capsule"
   ak_product_ids:
     - "{{ subscription_sku_capsule }}"
+    - SVC3124   # Red Hat Satellite Infrastructure Subscription (automated SKU)
     - MCT3718   # Red Hat Satellite Infrastructure Subscription
     - MCT3719   # Red Hat Satellite Infrastructure Subscription (Beta)
     - MCT0369   # Red Hat Satellite Capsule Server

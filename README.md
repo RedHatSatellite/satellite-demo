@@ -89,7 +89,7 @@ Requirements
    * Create a manifest [Obtained from the portal][4]
    * Put in the following subscriptions:
      * at least 2x Subscriptions for RHEL (ex: RH00008)
-     * at least 2x Subscriptions for the capsules (ex: MCT3718)
+     * at least 2x Subscriptions for the capsules (ex: SVC3124)
      * for a complete list, look in the [defaults file](./playbooks/roles/satellite-server/defaults/main.yml)
    * download the manifest and place it where this README.md is located.
 3. Your AWS and Satellite credentials in an environment file:
