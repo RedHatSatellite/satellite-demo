@@ -7,7 +7,7 @@ perform a demo.
 INFORMATION
 -----------
 
-This playbook will take a while to run.
+This whole set of playbooks will take a while to run (between 2.5 and 3 hrs with current inventory is about $1.59)
 
 This was based on two projects. One is by Julio Villarreal Pelegrino, and
 another is from me (Billy Holmes).
@@ -17,7 +17,7 @@ another is from me (Billy Holmes).
 Overview
 --------
 
-This colletions of playbooks and roles will create a set of systems for a
+This colletion of playbooks and roles will create a set of systems for a
 Satellite 6 Demo that use an example domain (example-dot-com) using a
 customized dns server, and an haproxy node to load balance the capsules. It
 does the following actions:
@@ -51,7 +51,7 @@ does the following actions:
 5. Configures the Capsules
    1. registers them to the satellite
    2. generates the certificates
-   3. installs the capsule packaegs and configures the firewall
+   3. installs the capsule packages and configures the firewall
    4. runs the capsule installer and starts the capsule process
    5. assigns the lifecycle environments to the capsules
    6. assigns capsules to default org and loc, sets download polciy to inherit from repo
@@ -79,21 +79,33 @@ does the following actions:
 Requirements
 ------------
 
-1. Red Hat Subscriptions in [Cloud Access][3]
-   * Red Hat Enterprise Linux Server (will be running version 7)
-   * Satellite 6 Infrasture (included with Smart Mangement purchased after Mar 1st, 2018)
+1. Assign subscriptions for RHEL:
+   1. Create an Activation Key in the [Portal][6]
+     * By Default, I'm using an activation key of `SATELLITE-DEMO-SATELLITE`, [here's how to create one][5].
+   2. Assign your subscriptions to [Cloud Access][3]
+     * 6x Red Hat Enterprise Linux Server (will be running version RHEL 7.5)
+     * You will effectively "double register" the Satellite server.
 2. A Satellite manifest.zip
-   * placed where this README.md is located. [Obtained from the portal][4]
-3. Your AWS and Satellite credentials in an environment file callsed `aws`:
+   * Create a manifest [Obtained from the portal][4]
+   * Put in the following subscriptions:
+     * at least 2x Subscriptions for RHEL (ex: RH00008)
+     * at least 2x Subscriptions for the capsules (ex: SVC3124)
+     * for a complete list, look in the [defaults file](./playbooks/roles/satellite-server/defaults/main.yml)
+   * download the manifest and place it where this README.md is located.
+3. Your AWS and Satellite credentials in an environment file:
    * `AWS_ACCESS_KEY` - your AWS access key
    * `AWS_SECRET_KEY` - your AWS secret key
-   * `SUBSCRIPTION_ORG` - your Satellite Org, so the activation keys work
+   * `SUBSCRIPTION_ORG` - your Satellite Org, so the activation key works
+4. Source the environment file before running the playbook (or use the boostrap container detailed below).
 
-By Default, I'm using an activation key of `SATELLITE-DEMO-SATELLITE`, which you can [create on the portal][5].
+```bash
+$ source ./env_file
+```
 
 [3]: https://www.redhat.com/en/technologies/cloud-computing/cloud-access
 [4]: https://access.redhat.com/solutions/1217793
 [5]: https://access.redhat.com/articles/1378093
+[6]: https://access.redhat.com/management/activation_keys
 
 Additionally, you will need Ansible. There are several options:
 * Red Hat Ansible Tower
@@ -178,7 +190,8 @@ cloud provider DNS and hostname settings.
 | `ansible_user` | If you change the image above, you'll need to know the login user (ex: ec2-user, cloud-user) |
 | `ec2_demo_tag` | If you change this, then you can run multiple of these clusters in AWS at the same time. You'll have to add it to the `ec2` group in the inventory file. |
 | `private_ip_start` | If you change the above, then you'll need to change this variable, too, probably. |
-| `ec2_instance_type` | If you want beefier VMs. With the current inventory defaults, it costs me $7.50 per day as of May 17th, 2018. |
+| `ec2_instance_type` | If you want beefier VMs. With the current inventory in AWS, it costs me $10.90 per day as of Jul 20th, 2018. |
+| `ec2_volume_sizes` | The array of volume sizes, current inventory configures a total of 562 GiB at a cost of about $1.77 a day. The more storage allocated to the Satellite and Capsules means more throughput and IOPS, you can also change the storage type and get more performance while paying more. |
 
 [Cloud Access]: https://www.redhat.com/en/technologies/cloud-computing/cloud-access
 
