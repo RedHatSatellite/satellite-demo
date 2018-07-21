@@ -81,11 +81,11 @@ satellite_packages: |
 # the rest are whatever you want
 satellite_hammer_views:
 - name: "NoDocker"
-  repos: [ "extras" ]
-  ak: "RHEL7-DEMO"
-  override: [ ]
+  repos: [ "extras", "sattools" ]
+  ak: "RHEL7-NoDocker"
+  override: [ "rhel-7-server-extras-rpms", "rhel-7-server-satellite-tools-{{ satellite_tools_version }}-rpms" ]
   varname: "NoDocker"
-  ak_product_ids: [ ]
+  ak_product_ids: "{{ default_rhel_subscription_skus }}"
 - name: "RHEL7-Server-Kickstart"
   repos: [ "kickstart" ]
   ak: ""
@@ -97,33 +97,7 @@ satellite_hammer_views:
   ak: "RHEL7-BASE"
   override: [ "rhel-7-server-satellite-tools-{{ satellite_tools_version }}-rpms" ]
   varname: "RHEL7Server"
-  ak_product_ids:
-    - "{{ subscription_sku_rhel }}"
-    - RH00003        # Red Hat Enterprise Linux Server, Premium (Physical or Virtual Nodes)
-    - RH00004        # Red Hat Enterprise Linux Server, Standard (Physical or Virtual Nodes)
-    - RH00005        # Red Hat Enterprise Linux Server Entry Level, Self-support
-    - RH00008        # Red Hat Enterprise Linux Server with Smart Management, Premium (Physical or Virtual Nodes)
-    - RH00009        # Red Hat Enterprise Linux Server with Smart Management, Standard (Physical or Virtual Nodes)
-    - RH00010        # Red Hat Enterprise Linux Server Entry Level with Smart Management, Self-support
-    - RH00013        # Red Hat Enterprise Linux Server (Disaster Recovery), Premium (Physical or Virtual Nodes)
-    - RH00014        # Red Hat Enterprise Linux Server (Disaster Recovery), Standard (Physical or Virtual Nodes)
-    - RH00015        # Red Hat Enterprise Linux Server Entry Level (Disaster Recovery), Self-support
-    - RH00018        # Red Hat Enterprise Linux Server with Smart Management (Disaster Recovery), Premium (Physical or Virtual Nodes)
-    - RH00019        # Red Hat Enterprise Linux Server with Smart Management (Disaster Recovery), Standard (Physical or Virtual Nodes)
-    - RH00020        # Red Hat Enterprise Linux Server Entry Level with Smart Management (Disaster Recovery), Self-support
-    - RH00023        # Red Hat Enterprise Linux Server with Smart Management & Resilient Storage, Premium (Physical or Virtual Nodes)
-    - RH00024        # Red Hat Enterprise Linux Server with Smart Management & Resilient Storage, Standard (Physical or Virtual Nodes)
-    - RH00065        # 30 Day Red Hat Enterprise Linux Server Self-Supported Evaluation
-    - RH00066        # 30 Day Red Hat Enterprise Linux Server Supported Evaluation with Smart Management, Monitoring and all Add-Ons
-    - RH00067        # 60 Day Red Hat Enterprise Linux Server Supported Evaluation with Smart Management, Monitoring and all Add-Ons
-    - RH00068        # 90 Day Red Hat Enterprise Linux Server Supported Evaluation with Smart Management, Monitoring and all Add-Ons
-    - RH00069        # Red Hat Enterprise Linux Server Beta
-    - RH00072        # Red Hat Enterprise Linux Server Beta for HPC Compute Node
-    - RH00431        # Red Hat Enterprise Linux Self-Supported (NFR)
-    - RH00798        # Red Hat Developer Subscription
-    - RH2262474      # Red Hat Enterprise Linux Developer Suite
-    - RH2264664      # Red Hat Enterprise Linux Developer Support, Enterprise
-    - RH2282403      # Red Hat Enterprise Linux Developer Support, Professional
+  ak_product_ids: "{{ default_rhel_subscription_skus }}"
 - name: "RHEL7-Capsule"
   repos: [ "rhscl", "base", "capsule", "sattools" ]
   ak: "RHEL7-CAPSULE"
@@ -132,28 +106,7 @@ satellite_hammer_views:
     - "rhel-7-server-satellite-capsule-{{ satellite_version }}-rpms"
     - "rhel-7-server-satellite-tools-{{ satellite_tools_version }}-rpms"
   varname: "RHEL7Capsule"
-  ak_product_ids:
-    - "{{ subscription_sku_capsule }}"
-    - SVC3124   # Red Hat Satellite Infrastructure Subscription (automated SKU)
-    - MCT3718   # Red Hat Satellite Infrastructure Subscription
-    - MCT3719   # Red Hat Satellite Infrastructure Subscription (Beta)
-    - MCT0369   # Red Hat Satellite Capsule Server
-    - MCT0403   # Red Hat Satellite Capsule Server (Special)
-    - MCT0427   # Red Hat Satellite Capsule Server (Old)
-    - MCT0941   # Red Hat Satellite Capsule Server (Old)
-    - MCT2047   # Red Hat Satellite Capsule Server (CCSP)
-    - MCT2535   # Red Hat Satellite Capsule Server (L3 Only)
-    - MCT3096   # Red Hat Satellite Capsule High Touch Beta
-    - MCT3098   # Red Hat Satellite Capsule Beta
-    - MCT3132   # Red Hat Satellite Capsule 6 (For Transition Only)
-    - MCT3262   # Red Hat Satellite Capsule Server (Capsule Server only, RHEL not included)
-    - MCT3713   # Red Hat Satellite Capsule Server, Premium (Embedded)
-    - RC0305160 # Red Hat Satellite and Capsule Server (CCSP)
-    - SER0206US # 90 Day Supported Red Hat Satellite Capsule Server Evaluation
-    - SER0228US # 30 Day Self-Supported Red Hat Satellite Capsule Server Evaluation
-    - SER0232US # Red Hat Satellite (Employee Testing)
-    - SER0269   # 60 Day Supported Red Hat Satellite Capsule Server Evaluation
-    - SER0302   # Red Hat Satellite Capsule Server (NFR)
+  ak_product_ids: "{{ default_capsule_subscription_skus }}"
 satellite_hammer_product: "Red Hat Enterprise Linux Server"
 satellite_hammer_basearch: "x86_64"
 satellite_hammer_release: "7Server"
