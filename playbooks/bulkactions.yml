@@ -113,3 +113,12 @@
       when:
         - bulk == 'poweron'
         - ec2_instance_ids | length > 0
+
+    - name: touch inventory
+      connection: local
+      file:
+        path: ./inventory/sat-demo
+        state: touch
+      when:
+        - bulk == 'poweron'
+        - ec2_instance_ids | length > 0
