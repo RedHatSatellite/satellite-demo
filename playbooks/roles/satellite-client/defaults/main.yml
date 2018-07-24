@@ -7,3 +7,4 @@ satellite_tools_repo: "rhel-7-server-satellite-tools-{{ satellite_tools_version 
 satellite_subscription_ak: RHEL7-BASE
 satellite_subscription_hg: RHEL7-Server
 satellite_skip_puppet: false
+bootstrap_url: "http://{{ satellite_server_hostname }}/pub/bootstrap.py"
