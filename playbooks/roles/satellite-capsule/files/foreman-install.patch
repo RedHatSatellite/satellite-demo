@@ -1,0 +1,60 @@
+--- a/modules/puppet/manifests/server/passenger.pp	2018-06-14 12:37:33.000000000 +0000
++++ b/modules/puppet/manifests/server/passenger.pp	2018-07-26 15:44:09.720704644 +0000
+@@ -29,6 +29,9 @@
+   include ::apache::mod::passenger
+   contain 'puppet::server::rack' # lint:ignore:relative_classname_inclusion (PUP-1597)
+ 
++  $ssl_combined_name = basename($ssl_cert)
++  $ssl_combined = "${ssl_dir}/combined/${ssl_combined_name}"
++
+   $directory = {
+     'path'              => "${app_root}/public/",
+     'passenger_enabled' => 'On',
+@@ -57,10 +60,16 @@
+   ]
+ 
+   if $puppet_ca_proxy and $puppet_ca_proxy != '' {
++    puppet::server::combine_certs { $ssl_combined:
++      combined => $ssl_combined,
++      cert     => $ssl_cert,
++      key      => $ssl_cert_key,
++    }
++
+     include ::apache::mod::proxy
+     include ::apache::mod::proxy_http
+ 
+-    $custom_fragment = "ProxyPassMatch ^/([^/]+/certificate.*)$ ${puppet_ca_proxy}/\$1"
++    $custom_fragment = "ProxyPassMatch ^/([^/]+/certificate.*)$ ${puppet_ca_proxy}/\$1\n  SSLProxyMachineCertificateFile ${ssl_combined}"
+     $ssl_proxyengine = true
+   } else {
+     $custom_fragment = undef
+@@ -107,13 +116,13 @@
+     # Best we can do is reverse the Order directive and add our own 'Deny from all' for good measure.
+     $directories_http = [
+       merge($directory, {
+-        'order'           => false,
+-        'deny'            => false,
+-        'allow'           => false,
+-        'custom_fragment' => join([
+-            'Order deny,allow',
+-            'Deny from all',
+-            inline_template("<%- if @http_allow and Array(@http_allow).join(' ') != '' -%>Allow from <%= @http_allow.join(' ') %><%- end -%>"),
++          'order'           => false,
++          'deny'            => false,
++          'allow'           => false,
++          'custom_fragment' => join([
++              'Order deny,allow',
++              'Deny from all',
++              inline_template("<%- if @http_allow and Array(@http_allow).join(' ') != '' -%>Allow from <%= @http_allow.join(' ') %><%- end -%>"),
+           ], "\n")
+       }),
+     ]
+@@ -130,7 +139,7 @@
+           },
+           'SetEnvIf X-Client-Verify "(.*)" SSL_CLIENT_VERIFY=$1',
+           'SetEnvIf X-SSL-Client-DN "(.*)" SSL_CLIENT_S_DN=$1',
+-        ], "\n"),
++      ], "\n"),
+       options                 => ['None'],
+       passenger_pre_start     => $http_pre_start,
+       passenger_min_instances => $passenger_min_instances,

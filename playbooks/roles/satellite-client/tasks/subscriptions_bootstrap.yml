@@ -22,7 +22,6 @@
     {% if satellite_skip_puppet %}
     --skip puppet
     {% endif %}
-    {% if satellite_smartproxy is defined and satellite_smartproxy | length > 0 %}
-    --puppet-ca-port 8141
-    {% endif %}
-#--enablerepos='{{ satellite_client_repos | map('trim') | list | join(',') }}'
+#     {% if satellite_smartproxy is defined and satellite_smartproxy | length > 0 and inventory_hostname not in groups.capsules %}
+#     --puppet-ca-port 8141
+#     {% endif %}

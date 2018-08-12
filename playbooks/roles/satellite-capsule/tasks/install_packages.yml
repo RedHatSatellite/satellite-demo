@@ -27,3 +27,13 @@
   yum:
     name: "{{ satellite_packages | join(',') }}"
     state: present
+
+- name: "Patch foreman-installer https://github.com/theforeman/puppet-puppet/pull/613"
+  patch:
+    src: foreman-install.patch
+    dest: /usr/share/foreman-installer/modules/puppet/manifests/server/passenger.pp
+
+- name: "Copy foreman-installer needed files https://github.com/theforeman/puppet-puppet/pull/613"
+  copy:
+    dest: /usr/share/foreman-installer/modules/puppet/manifests/server/combine_certs.pp
+    src: combine_certs.pp

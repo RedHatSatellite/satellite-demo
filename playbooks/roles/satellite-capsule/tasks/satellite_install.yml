@@ -80,7 +80,6 @@
   when:
     - "hostvars[inventory_hostname].satellite_smartproxy | default('') | length > 0"
     - "inventory_hostname != groups.capsules[0]"
-    - false # XXX testing
   delegate_to: "{{ groups.capsules[0] }}"
   command: "flock /etc/passwd puppet cert generate {{ inventory_hostname }} --dns_alt_names={{ satellite_smartproxy }}"
   args:
@@ -92,7 +91,6 @@
   when:
     - "hostvars[inventory_hostname].satellite_smartproxy | default('') | length > 0"
     - "inventory_hostname != groups.capsules[0]"
-    - false # XXX testing
   delegate_to: "{{ groups.capsules[0] }}"
   archive:
     dest: "/tmp/{{ inventory_hostname }}-puppet-certs.tar.gz"
@@ -107,7 +105,6 @@
   when:
     - "hostvars[inventory_hostname].satellite_smartproxy | default('') | length > 0"
     - "inventory_hostname != groups.capsules[0]"
-    - false # XXX testing
   delegate_to: "{{ groups.capsules[0] }}"
   fetch:
     dest: /tmp/
@@ -118,7 +115,6 @@
   when:
     - "hostvars[inventory_hostname].satellite_smartproxy | default('') | length > 0"
     - "inventory_hostname != groups.capsules[0]"
-    - false # XXX testing
   copy:
     dest: "/root/{{ inventory_hostname }}-puppet-certs.tar.gz"
     src: "/tmp/{{ inventory_hostname }}-puppet-certs.tar.gz"
@@ -127,7 +123,6 @@
   when:
     - "hostvars[inventory_hostname].satellite_smartproxy | default('') | length > 0"
     - "inventory_hostname != groups.capsules[0]"
-    - false # XXX testing
   yum:
     name: "{{ puppet_server_package }}"
   vars:
@@ -137,7 +132,6 @@
   when:
     - "hostvars[inventory_hostname].satellite_smartproxy | default('') | length > 0"
     - "inventory_hostname != groups.capsules[0]"
-    - false # XXX testing
   shell: |
     mkdir {{ puppetlabs_etc }}/ssl
     tar -xvzf /root/{{ inventory_hostname }}-puppet-certs.tar.gz -C {{ puppetlabs_etc }}/ssl
@@ -160,19 +154,15 @@
     --foreman-proxy-content-pulp-oauth-secret {{ pulp_oauth_secret }}
     --foreman-proxy-content-certs-tar /root/{{ inventory_hostname }}-certs.tar
     {% if satellite_smartproxy | default('') | length > 0 %}
-    --puppet-ca-server={{ satellite_server_hostname }}
-    --puppet-puppetmaster={{ satellite_server_hostname }}
-    --puppet-server-ca-proxy=https://{{ satellite_server_hostname }}:8140
+    --puppet-ca-server={{ inventory_hostname }}
+    {% if inventory_hostname != groups.capsules[0] %}
+    --puppet-server-ca-proxy=https://{{ hostvars[groups.capsules[0]].hostname }}:8140
     --puppet-server-ca=false
     --foreman-proxy-puppetca=false
+    {% endif %}
     --puppet-dns-alt-names {{ satellite_smartproxy }}
     {% endif %}
     --puppet-server-foreman-url {{ satellite_url }}
-# XXX: remove
-# --puppet-ca-server {{ inventory_hostname }}
-# --foreman-proxy-puppetca false
-# --puppet-server-ca {{ (inventory_hostname == groups.capsules[0]) | ternary('true', 'false') }}
-# XXX: remove
 
 - set_fact:
     satellite_is_installed: true
