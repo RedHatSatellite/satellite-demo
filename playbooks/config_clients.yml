@@ -10,8 +10,10 @@
   vars:
     satellite_subscription_ak: RHEL7-BASE,Demo
     satellite_subscription_hg: RHEL7-Server/Demo
-    satellite_skip_puppet: true
+    satellite_skip_puppet: false
     subscription_ak: ignore
     subscription_register: false
+    # need the --puppet-ca-port option - should be in the next GA version
+    bootstrap_url: "https://raw.githubusercontent.com/Katello/katello-client-bootstrap/c7b2f514982fab2a614d2b942ef9705a9730a32c/bootstrap.py"
   roles:
     - satellite-client

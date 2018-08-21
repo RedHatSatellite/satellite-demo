@@ -12,3 +12,4 @@ satellite_packages:
   - satellite-capsule
   - bind-utils
   - vim
+  - foreman-installer

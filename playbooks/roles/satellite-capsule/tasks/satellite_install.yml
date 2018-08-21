@@ -154,10 +154,13 @@
     --foreman-proxy-content-pulp-oauth-secret {{ pulp_oauth_secret }}
     --foreman-proxy-content-certs-tar /root/{{ inventory_hostname }}-certs.tar
     {% if satellite_smartproxy | default('') | length > 0 %}
+    --puppet-ca-server={{ inventory_hostname }}
+    {% if inventory_hostname != groups.capsules[0] %}
+    --puppet-server-ca-proxy=https://{{ hostvars[groups.capsules[0]].hostname }}:8140
+    --puppet-server-ca=false
+    --foreman-proxy-puppetca=false
+    {% endif %}
     --puppet-dns-alt-names {{ satellite_smartproxy }}
-    --puppet-ca-server {{ inventory_hostname }}
-    --foreman-proxy-puppetca false
-    --puppet-server-ca {{ (inventory_hostname == groups.capsules[0]) | ternary('true', 'false') }}
     {% endif %}
     --puppet-server-foreman-url {{ satellite_url }}
 

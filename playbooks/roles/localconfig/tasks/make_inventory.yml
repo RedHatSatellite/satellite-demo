@@ -1,7 +1,7 @@
 # vim: ts=2 sw=2 expandtab ai
 ---
 
-- name: clean up dynamically create OCP inventory
+- name: clean up dynamically create inventory
   run_once: true
   connection: local
   when: sshconfig_clean
@@ -9,7 +9,7 @@
     dest: inventory/demo.satellite
     state: absent
 
-- name: dynamically create OCP inventory
+- name: dynamically create inventory
   run_once: true
   connection: local
   when: not sshconfig_clean

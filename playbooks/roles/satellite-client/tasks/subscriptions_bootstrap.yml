@@ -3,7 +3,7 @@
 
 - name: download bootstrap script
   get_url:
-    url: "{{ satellite_url }}/pub/bootstrap.py"
+    url: "{{ bootstrap_url }}"
     dest: /tmp/bootstrap.py
     validate_certs: false
     mode: 0755
@@ -20,6 +20,8 @@
     -L {{ satellite_default_location }}
     --force
     {% if satellite_skip_puppet %}
-    --skip-puppet
+    --skip puppet
     {% endif %}
-#--enablerepos='{{ satellite_client_repos | map('trim') | list | join(',') }}'
+#     {% if satellite_smartproxy is defined and satellite_smartproxy | length > 0 and inventory_hostname not in groups.capsules %}
+#     --puppet-ca-port 8141
+#     {% endif %}

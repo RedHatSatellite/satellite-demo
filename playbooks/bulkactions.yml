@@ -113,3 +113,14 @@
       when:
         - bulk == 'poweron'
         - ec2_instance_ids | length > 0
+
+    - name: touch inventory
+      connection: local
+      file:
+        path: ./inventory/sat-demo
+        state: touch
+      vars:
+        ec2_instance_ids: "{{ ec2_instances.instances | map(attribute='instance_id') | list }}"
+      when:
+        - bulk == 'poweron'
+        - ec2_instance_ids | length > 0
