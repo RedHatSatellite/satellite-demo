@@ -29,7 +29,7 @@ defaults
     maxconn                 1000
     option log-health-checks
 
-{% set hv_first_capsule = hostvars[groups.capsules | first] %}
+{% set hv_first_capsule = hostvars[groups.capsules.0 | default('')] | default({}) %}
 {% set ports = [] %}
 {% set ports = ports + [ dict(name='http',     ports=[80,80],     lb='roundrobin', nodes=groups.capsules, mode='tcp') ] %}
 {% set ports = ports + [ dict(name='demoapp',  ports=[8080,8080], lb='roundrobin', nodes=groups.clients, mode='http') ] %}
