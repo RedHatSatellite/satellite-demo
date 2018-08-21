@@ -1,27 +1,41 @@
 # vim: ts=2 sw=2 expandtab ai
 ---
-- name: check if RHUI repos need to be disabled
+- name: remove RHUI repos
   when:
     - ansible_pkg_mgr == 'yum'
     - subscription_org | length > 0
     - subscription_ak | length > 0
-  shell: |
-    grep 'enabled.*=.*1' /etc/yum.repos.d/redhat-rhui* || true
-    grep 'enabled.*=.*1' /etc/yum/pluginconf.d/rhnplugin.conf || true
+    - subscription_register
+  yum:
+    name: "{{ item }}"
+    state: absent
   register: rhui_check
-  changed_when: "'enabled' in rhui_check.stdout"
+  with_items:
+    - "rh-amazon-rhui-client*"
 
-- name: disable RHUI repos
+- name: clean yum cache
+  file:
+    state: absent
+    path: "/var/cache/yum/{{ ansible_machine }}"
   when:
     - ansible_pkg_mgr == 'yum'
     - subscription_org | length > 0
     - subscription_ak | length > 0
+    - subscription_register
     - rhui_check is changed
-  shell: |
-    sed -i 's/enabled.*=.*1/enabled = 0/' /etc/yum.repos.d/redhat-rhui*
-    sed -i 's/enabled.*=.*1/enabled = 0/' /etc/yum/pluginconf.d/rhnplugin.conf
-  args:
-    warn: false
+
+- name: enable RHEL product ID
+  file:
+    dest: /etc/yum/pluginconf.d/product-id.conf
+    content: |
+      [main]
+      enabled=1
+  when:
+    - ansible_pkg_mgr == 'yum'
+    - subscription_org | length > 0
+    - subscription_ak | length > 0
+    - subscription_register
+    - rhui_check is changed
 
 - name: register system
   redhat_subscription:
