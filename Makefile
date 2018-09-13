@@ -63,7 +63,7 @@ step step0 step1 step2 step3: INVENTORY_FILE=$(INSTALL_INVENTORY)
 bulk bulk-demoapp bulk-unregister bulk-poweroff: INVENTORY_FILE=$(INSTALL_INVENTORY)
 bulk-poweron: INVENTORY_FILE=$(CREATE_INVENTORY)
 
-post: TAGS+=untagged
+post: TAGS+=untagged,post
 
 clean: $(PLAYBOOK_CLEAN)
 	$(ANSIBLE) $<
