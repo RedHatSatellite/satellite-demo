@@ -33,8 +33,8 @@
   register: ec2_vpc_subnet_facts
 
 - set_fact:
-    ec2_vpc_subnet: "{{ (ec2_vpc_subnet_facts.subnets | first).id }}"
-    ec2_vpc_subnet_cidr_block: "{{ (ec2_vpc_subnet_facts.subnets | first).cidr_block }}"
+    ec2_vpc_subnet: "{{ ec2_vpc_subnet_facts.subnets.0.id }}"
+    ec2_vpc_subnet_cidr_block: "{{ ec2_vpc_subnet_facts.subnets.0.cidr_block }}"
   run_once: true
 
 - name: lookup current external IP
@@ -53,6 +53,7 @@
     
 - name: ensure VPC Security Group is created
   run_once: true
+  register: ec2_sg_id
   ec2_group:
     aws_access_key: "{{ aws_access_key }}"
     aws_secret_key: "{{ aws_secret_key }}"
@@ -81,4 +82,6 @@
         cidr_ip: "{{ nw }}"
       {% endfor %}
 
-
+- set_fact:
+    ec2_sg_id: "{{ ec2_sg_id.group_id }}"
+    ec2_region: "{{ ec2_region }}" # this is to inject the variable into the hostvars in case it's default

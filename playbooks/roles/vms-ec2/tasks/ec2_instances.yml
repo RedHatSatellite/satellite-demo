@@ -37,6 +37,7 @@
     public_ip: "{{ ( ec2_instances.instances | first | default({}) ).public_ip_address | default('')}}"
     internal_ip: "{{ ( ec2_instances.instances | first | default({}) ).private_ip_address | default('')}}"
     ec2_instance_ids: "{{ ec2_instances | json_query('instances[].instance_id') }}"
+    ec2_availability_zone: "{{ ec2_instances.instances | map(attribute='placement.availability_zone') | first | default('') }}"
 
 - debug:
     var: ec2_facts
