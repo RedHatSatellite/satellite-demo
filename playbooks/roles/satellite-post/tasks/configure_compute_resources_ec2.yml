@@ -1,0 +1,108 @@
+---
+# vim: sw=2 ts=2 ai expandtab
+
+- include_role:
+    name: satellite-shared
+    tasks_from: callsatellite.yml
+  vars:
+    call_name: "Check EC2 compute resource"
+    call_api: "/api/compute_resources?search=name=AWS-{{ ec2_region }}"
+    call_var: "call_out"
+
+- name: create EC2 compute resource
+  command: "hammer --output=json compute-resource create --name AWS-{{ ec2_region }} --provider EC2 --location-ids {{ loc_id }} --organization-ids {{ org_id }} --user {{ ec2_aws_access_key }} --password {{ ec2_aws_secret_key }} --region {{ ec2_region }}"
+  when: call_out.json.results | length == 0
+  register: ec2_compute_resource
+
+- set_fact:
+    ec2_compute_resource_id: "{{ (ec2_compute_resource.stdout | from_json).id if (call_out.json.results | length == 0) else call_out.json.results.0.id }}"
+
+- include_role:
+    name: satellite-shared
+    tasks_from: callsatellite.yml
+  vars:
+    call_name: "Check EC2 compute profile"
+    call_api: "/api/compute_profiles?search=name=AWS-{{ ec2_region }}"
+    call_var: "call_out"
+
+- set_fact:
+    ec2_compute_profile_id: "{{ call_out.json.results.0.id if (call_out.json.results | length > 0) else 0 }}"
+
+- debug:
+    var: tmp
+  vars:
+    tmp:
+      satellite_user: "{{ satellite_user }}"
+      satellite_pass: "{{ satellite_pass }}"
+
+- name: create EC2 compute profile
+  when: ec2_compute_profile_id | int < 1
+  uri:
+    url: "{{ satellite_url }}/api/compute_profiles"
+    method: POST
+    body_format: json
+    user: "{{ satellite_user }}"
+    password: "{{ satellite_pass }}"
+    force_basic_auth: yes
+    body:
+      compute_profile:
+        name: "AWS-{{ ec2_region }}"
+    return_content: true
+    status_code: 201
+  register: call_out
+
+- set_fact:
+    ec2_compute_profile_id: "{{ ec2_compute_profile_id if (ec2_compute_profile_id | int) > 0 else call_out.json.id }}"
+
+- include_role:
+    name: satellite-shared
+    tasks_from: callsatellite.yml
+  vars:
+    call_name: "GET EC2 compute profile"
+    call_api: "/api/compute_profiles/{{ ec2_compute_profile_id }}"
+    call_var: "call_out"
+
+- include_role:
+    name: satellite-shared
+    tasks_from: callsatellite.yml
+  vars:
+    call_name: "get OS id"
+    call_api: "/api/operatingsystems?search=major=7%20and%20name=RedHat&order=minor"
+    call_var: "hammer_os"
+
+- set_fact:
+    hammer_os: "{{ hammer_os.json.results | last }}"
+
+- name: create EC2 image
+  command: "hammer compute-resource image create --compute-resource-id {{ ec2_compute_resource_id }} --architecture x86_64 --operatingsystem-id {{ hammer_os.id }} --name {{ ec2_ami_image }} --password ansible123 --username ansible --user-data 1 --uuid {{ ec2_ami_image }}"
+  register: hammer_out
+  changed_when: hammer_out.rc == 0
+  failed_when:
+    - hammer_out.rc != 0
+    - "'Could not create the image:' not in hammer_out.stderr_lines"
+
+- name: create EC2 compute attribute
+  when: call_out.json.compute_attributes | length == 0
+  uri:
+    url: "{{ satellite_url }}/api/compute_attributes"
+    method: POST
+    body_format: json
+    user: "{{ satellite_user }}"
+    password: "{{ satellite_pass }}"
+    force_basic_auth: yes
+    body: "{{ body }}"
+    status_code: 201
+    return_content: true
+  register: call_out
+  vars:
+    body:
+      compute_resource_id: "{{ ec2_compute_resource_id }}"
+      compute_profile_id: "{{ ec2_compute_profile_id }}"
+      vm_attrs:
+        availability_zone: "{{ ec2_availability_zone }}"
+        flavor_id: t2.small
+        image_id: "{{ ec2_ami_image }}"
+        managed_ip: public
+        security_group_ids:
+        - "{{ ec2_sg_id }}"
+        subnet_id: "{{ ec2_vpc_subnet }}"

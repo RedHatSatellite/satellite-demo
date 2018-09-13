@@ -1,0 +1,35 @@
+---
+# vim: sw=2 ts=2 ai expandtab
+
+- name: Read public ansible ssh key
+  register: satellite_sshkey
+  command: "/usr/bin/head -n 1  ~/.ssh/authorized_keys"
+
+- name: Ensure we read in key
+  assert:
+    msg: Did not read in sshkey
+    that:
+      - "satellite_sshkey.stdout[0:3] == 'ssh'"
+      - "satellite_sshkey.stdout | length > 128"
+
+- include_role:
+    name: satellite-shared
+    tasks_from: callsatellite.yml
+  vars:
+    call_name: "get global parameters"
+    call_api: "/api/common_parameters?search=name=sshkey"
+    call_var: "call_out"
+
+- name: set global sshkey parameter if needed
+  command: "hammer global-parameter set --name=sshkey value='{{ satellite_sshkey.stdout }}'"
+  when:
+    - call_out.json.results | length > 0
+    - call_out.json.results.0.value != satellite_sshkey.stdout
+
+- include_tasks: configure_compute_resources_ec2.yml
+  when:
+    - ec2_aws_access_key is defined and ec2_aws_access_key | length > 0
+    - ec2_aws_secret_key is defined and ec2_aws_secret_key | length > 0
+    - ec2_vpc_id is defined
+    - ec2_vpc_subnet is defined
+    - ec2_region is defined
