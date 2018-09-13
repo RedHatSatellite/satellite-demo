@@ -4,9 +4,6 @@
 ovirt
 ec2
 
-[ec2:vars]
-ec2_demo_tag=test-satellite1
-
 [ovirt]
 
 ; hosts that are in AWS 
@@ -20,14 +17,13 @@ satellites
 satellite
 
 [capsules]
-capsule[1:2]
+# capsule[1:2]
 
 [dns]
 dns1
 
 [clients]
-client1
-client2 satellite_server='{{ groups.satellites | first }}' satellite_url=
+client[1:2]
 
 [dns:vars]
 subscription_ak=
@@ -40,8 +36,8 @@ docker_storage_dev=/dev/xvdb
 subscription_ak=
 ec2_volume_sizes=[ 10, 0 ]
 ec2_instance_type=t2.small
-satellite_server={{ groups.dns | first }}
-satellite_url=https://{{ satellite_server_hostname }}:8443
+# satellite_server={{ groups.satellites | first }}
+# satellite_url=https://{{ satellite_server_hostname }}:8443
 
 [capsules:vars]
 ec2_volume_sizes=[ 128, 0 ]
@@ -50,6 +46,8 @@ subscription_ak=
 satellite_smartproxy={{ groups.dns | first }}
 
 [satellites:vars]
+satellite_user=admin
+satellite_pass=redhat123
 ec2_volume_sizes=[ 256, 0 ]
 ec2_instance_type=m5.xlarge
 subscription_ak=SATELLITE-DEMO-SATELLITE
@@ -64,6 +62,7 @@ satellite_enable_discovery=False
 satellite_subnets=[ [ "{{ ec2_vpc_subnet_cidr_block}}", "{{ ec2_vpc_subnet_cidr_block | ipaddr('subnet') | ipaddr(1) | ipaddr('address') }}" ] ]
 
 [ec2:vars]
+# ec2_demo_tag=test-satellite1
 ec2_volumes={{ default_ec2_volumes[0:1] }}
 ansible_user=ec2-user
 private_ip_start=80
@@ -73,7 +72,7 @@ hostname="{{ inventory_hostname }}.example.com"
 # the following is RHEL 7.5 2018-03-22 in us-east-1 via Cloud Access (recommended)
 ec2_ami_image=ami-0d70a070
 # put your network here, but it will look up your current IP
-# ec2_mynetworks=[ ]
+ec2_mynetworks=[ "108.247.233.239/32" ]
 # subnet will be picked from 1st subnet found in VPC if not defined
 # ec2_vpc_subnet=subnet-ffffffff
 # if you only have one VPC, then it will be selected, otherwise, define it here
