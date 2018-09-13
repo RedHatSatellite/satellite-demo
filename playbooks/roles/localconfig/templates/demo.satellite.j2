@@ -33,13 +33,31 @@ docker_storage_dev={{ hv.docker_storage_dev }}
 {% endfor %}
 
 [satellites:vars]
-{% set hv = hostvars[groups.satellites | first] %}
+{% set hv = hostvars[groups.satellites.0] %}
+satellite_user={{ hv.satellite_user }}
+satellite_pass={{ hv.satellite_pass }}
 satellite_version={{ hv.satellite_version }}
 satellite_rhsm_user={{ hv.satellite_rhsm_user }}
 satellite_manifest_file={{ hv.satellite_manifest_file }}
 satellite_enable_tftp={{ hv.satellite_enable_tftp }}
 satellite_enable_discovery={{ hv.satellite_enable_discovery }}
 satellite_subnets={{ hv.satellite_subnets | to_json}}
+{% if (hv.aws_access_key | default('') | length > 0)
+  and (hv.aws_secret_key | default('') | length > 0)
+  and (hv.ec2_availability_zone | default('') | length > 0)
+  and (hv.ec2_vpc_id | default('') | length > 0)
+  and (hv.ec2_vpc_subnet | default('') | length > 0)
+  and (hv.ec2_region | default('') | length > 0)
+%}
+ec2_aws_access_key={{ "{{ lookup('env', 'AWS_ACCESS_KEY') }}" }}
+ec2_aws_secret_key={{ "{{ lookup('env', 'AWS_SECRET_KEY') }}" }}
+ec2_availability_zone={{ hv.ec2_availability_zone }}
+ec2_vpc_id={{ hv.ec2_vpc_id }}
+ec2_vpc_subnet={{ hv.ec2_vpc_subnet }}
+ec2_region={{ hv.ec2_region }}
+ec2_ami_image={{ hv.ec2_ami_image }}
+ec2_sg_id={{ hv.ec2_sg_id }}
+{% endif %}
 
 [satellites]
 {% for node in groups.satellites %}
