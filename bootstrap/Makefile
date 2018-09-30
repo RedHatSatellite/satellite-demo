@@ -36,7 +36,7 @@ $(DOCKERFILE): $(DOCKERFILE).template $(MOTD) Makefile
 	sed -e "s,%%GID%%,$(GID)," -e "s,%%UID%%,$(UID)," -e "s,%%USER%%,$(USER)," $(DOCKERFILE).template > $(DOCKERFILE)
 
 clean: $(DOCKERFILE).template
-	rm -fv $(DOCKERFILE) files/etc/motd
+	rm -fv $(DOCKERFILE) files/etc/motd $(DOCKER_FLAG)
 
 .ONESHELL:
 run: $(DOCKERFILE)
