@@ -1,0 +1,4 @@
+---
+# vim: ts=2 sw=2 expandtab ai
+satellite_template_kickstart_userdata: '"Satellite Kickstart Default User Data"'
+satellite_template_erb: satellite_kickstart_default_user_data.erb

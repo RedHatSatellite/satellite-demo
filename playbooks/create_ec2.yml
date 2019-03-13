@@ -22,7 +22,5 @@
     ec2_create: True
   roles:
     - vms-ec2
-  tasks:
-    - include_role:
-       name: localconfig
-      when: localconfig == True
+    - localconfig
+  tasks: []

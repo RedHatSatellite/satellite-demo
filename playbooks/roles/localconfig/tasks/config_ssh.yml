@@ -31,11 +31,10 @@
     path: "{{ sshconfig_path }}"
     block: |
       {% for hn in play_hosts %}
-      {% if hostvars[hn].public_ip | default('') | length > 0 %}
-      Host {{ hn }} {{ hostvars[hn].hostname }} {{ hostvars[hn].public_ip }} {{ hostvars[hn].internal_ip }}
-        Hostname {{ hostvars[hn].public_ip }}
+      {% set hv = hostvars[hn] %}
+      Host {{ hn }} {{ hv.hostname }} {{ hv.public_ip | default('') }} {{ hv.internal_ip | default('') }}
+        Hostname {{ hv.public_ip }}
         UserKnownHostsFile /dev/null
         StrictHostKeyChecking no
-        User {{ ansible_user }}
-      {% endif %}
+        User {{ hv.ansible_user }}
       {% endfor %}

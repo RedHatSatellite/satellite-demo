@@ -31,8 +31,10 @@ defaults
 
 {% set hv_first_capsule = hostvars[groups.capsules.0 | default('')] | default({}) %}
 {% set ports = [] %}
-{% set ports = ports + [ dict(name='http',     ports=[80,80],     lb='roundrobin', nodes=groups.capsules, mode='tcp') ] %}
 {% set ports = ports + [ dict(name='demoapp',  ports=[8080,8080], lb='roundrobin', nodes=groups.clients, mode='http') ] %}
+{% if groups.capsules | length > 0 %}
+{% set ports = ports + [ dict(name='http',     ports=[80,80],     lb='roundrobin', nodes=groups.capsules, mode='tcp') ] %}
+{% endif %}
 {% if hv_first_capsule.satellite_smartproxy | default('') | length > 0 %}
 {% set ports = ports + [ dict(name='anaconda', ports=[8000,8000], lb='roundrobin', nodes=groups.capsules, mode='tcp') ] %}
 {% set ports = ports + [ dict(name='https',    ports=[443,443],   lb='source',     nodes=groups.capsules, mode='tcp') ] %}
@@ -43,6 +45,7 @@ defaults
 {% set ports = ports + [ dict(name='sproxy',   ports=[9090,9090], lb='roundrobin', nodes=groups.capsules, mode='tcp') ] %}
 {% set ports = ports + [ dict(name='docker',   ports=[5000,5000], lb='roundrobin', nodes=groups.capsules, mode='tcp') ] %}
 {% endif %}
+
 {% for port in ports %}
 
 listen lb_{{ port.name }}
@@ -55,8 +58,15 @@ listen lb_{{ port.name }}
 {% if port.mode == 'http' %}
     option               httpchk
 {% endif %}
+{% if port.name == 'demoapp' %}
+    acl is_git_url   path_beg -i /git
+    use-server gitserver if is_git_url
+{% endif %}
 
     balance             {{ port.lb }}
+{% if port.name == 'demoapp' %}
+    server gitserver 127.0.0.1:8888 weight 0
+{% endif %}
 {% for hn in port.nodes %}
     server {{ hn.split('.') | first }}  {{ hostvars[hn].internal_ip }}:{{ port.ports[1] }} check
 {% endfor %}

@@ -1,0 +1,86 @@
+---
+# vim: sw=2 ts=2 ai expandtab
+
+- include_role:
+    name: satellite-shared
+    tasks_from: callsatellite.yml
+  vars:
+    call_name: get list of puppet classes
+    call_api: /api/puppetclasses
+    call_var: "puppet_classes"
+
+- name: import puppet classes from server
+  connection: local
+  uri:
+    url: "{{ satellite_url }}/api/smart_proxies/{{ org_id }}/import_puppetclasses"
+    user: "{{ satellite_user }}"
+    password: "{{ satellite_pass }}"
+    force_basic_auth: yes
+    validate_certs: false
+    method: POST
+    headers:
+      Accept: "application/json,version=2"
+      Content-Type: "application/json,version=2"
+  when: puppet_classes.json.results | length == 0
+
+- include_role:
+    name: satellite-shared
+    tasks_from: callsatellite.yml
+  vars:
+    call_name: get list of puppet classes
+    call_api: /api/puppetclasses
+    call_var: "puppet_classes"
+
+- name: store puppet class IDs
+  set_fact:
+    puppetclass_ids: "{{ puppet_classes.json.results | flatten | map('extract', puppet_classes.json.results) | flatten | map(attribute='id') | sort  }}"
+
+- debug:
+    var: puppet_ids
+  vars:
+    puppet_ids: "{{ puppetclass_ids | join(', ') }}"
+
+- include_role:
+    name: satellite-shared
+    tasks_from: callsatellite.yml
+  vars:
+    call_name: get hostgroup id for RHEL7-Server
+    call_api: /api/hostgroups?search=name=RHEL7-Server
+    call_var: "hostgroup_search"
+
+- name: set hostgroup id for RHEL7-Server
+  set_fact:
+    hostgroup_id: "{{ hostgroup_search.json.results.0.id }}"
+
+- include_role:
+    name: satellite-shared
+    tasks_from: callsatellite.yml
+  vars:
+    call_name: get list of puppet classes for RHEL7-Server hostgroup
+    call_api: "/api/hostgroups/{{ hostgroup_id }}/puppetclass_ids"
+    call_var: "hostgroup_puppetclasses"
+
+- set_fact:
+    missing_puppetclass_ids: "{{ puppetclass_ids | difference(hostgroup_puppetclasses.json.results) }}"
+
+- debug:
+    var: missing_puppet_ids
+  vars:
+    missing_puppet_ids: "{{ missing_puppetclass_ids | join(', ') }}"
+
+- name: add missing puppet classes to RHEL7-Server
+  connection: local
+  uri:
+    url: "{{ satellite_url }}/api/hostgroups/{{ hostgroup_id }}/puppetclass_ids"
+    user: "{{ satellite_user }}"
+    password: "{{ satellite_pass }}"
+    force_basic_auth: yes
+    validate_certs: false
+    method: POST
+    headers:
+      Accept: "application/json,version=2"
+      Content-Type: "application/json,version=2"
+    body_format: json
+    body:
+      puppetclass_id: "{{ item }}"
+  with_items: "{{ missing_puppetclass_ids }}"

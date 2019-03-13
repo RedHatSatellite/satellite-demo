@@ -10,3 +10,7 @@ bootstrap/aws
 bootstrap/Dockerfile
 bootstrap/files/etc/motd
 manifest.zip
+foreman.cache
+foreman.facts
+foreman.hostcollections
+foreman.index

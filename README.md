@@ -177,8 +177,8 @@ cloud provider DNS and hostname settings.
 
 | Host | AWS type | vCPU | Memory | Purpose |
 | ---- | -------- | ---- | ------ | ------- |
-| dns1 | t2.small | 1 | 2GiB | dns, haproxy |
-| clients1,2 | t2.small | 1 | 2GiB | demoapp, clients |
+| dns1 | t3.small | 1 | 2GiB | dns, haproxy |
+| clients1,2 | t3.small | 1 | 2GiB | demoapp, clients |
 | capsule1,2 | m5.large | 2 | 8GiB | capsule |
 | satellite | m5.xlarge | 4 | 16GiB | satellite |
 

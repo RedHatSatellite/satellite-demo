@@ -1,0 +1,16 @@
+#!/bin/sh
+
+api()
+{
+	EP="$1" ; shift 1 ; curl -kv -u admin:redhat123 https://satellite.example.com"$EP" "$@"
+}
+
+import()
+{
+	api /api/v2/templates/import -H 'content-type:application/json' -X POST | jq
+}
+
+proxy()
+{
+	ssh -o ProxyCommand="ssh satellite -W %h:%p" "$@"
+}

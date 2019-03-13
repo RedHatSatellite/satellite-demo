@@ -1,0 +1,32 @@
+#!/bin/sh
+
+REPORTID=$1
+
+[ x$REPORTID == x ] && read -p 'Enter report ID (CTRL-C to abort): ' REPORTID
+
+source ./env
+
+err() {
+  echo "ERROR:" "$@" >&2
+  exit 1
+}
+
+echo "Reading Report: $REPORTID"
+api /api/v2/compliance/arf_reports/$REPORTID 2>/tmp/e >/tmp/x
+fgrep -q 'HTTP/1.1 404 Not Found' /tmp/e && err "Unable to find report with ID: $REPORTID"
+HOST=$(eval echo `jq .host.name /tmp/x`)
+
+echo "Download report for: $HOST"
+api /api/v2/compliance/arf_reports/$REPORTID/download 2>/tmp/e >/tmp/x
+
+sed -i '/UserKnownHostsFile .dev.null/d' ~/.ssh/config
+echo "Transfering report to Satellite server"
+scp /tmp/x satellite:results.xml.bz2
+ssh -q satellite "rm -f results.xml ; bzip2 -d results.xml.bz2"
+echo "Converting report into playbook"
+ssh -q satellite "oscap xccdf generate fix --fix-type ansible --result-id xccdf_org.open-scap_testresult_xccdf_org.ssgproject.content_profile_pci-dss --output play.yml results.xml"
+echo "Getting playbook"
+scp satellite:play.yml /tmp/play.yml
+
+set -x
+ansible-playbook -i ./foreman.py /tmp/play.yml --limit=client1.example.com -e ansible_host='{{ foreman.ip }}' -e ansible_user=ec2-user -e 'ansible_ssh_common_args="-o ProxyCommand=\"ssh satellite -W %h:%p\""' -e ansible_become=yes

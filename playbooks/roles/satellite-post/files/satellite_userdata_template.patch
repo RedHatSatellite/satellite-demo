@@ -1,0 +1,21 @@
+--- a/provisioning_templates/user_data/satellite_kickstart_default_user_data.erb
++++ b/provisioning_templates/user_data/satellite_kickstart_default_user_data.erb
+@@ -41,6 +41,9 @@ write_files:
+   permissions: '0755'
+   content: |
+     #!/bin/bash
++  <% unless @host.operatingsystem.atomic? -%>
++    yum erase '*rhui*' -y
++  <% end -%>
+ <%= indent 4 do
+       snippet 'subscription_manager_registration'
+     end %>
+@@ -71,6 +74,8 @@ write_files:
+ <%= indent 4 do
+       snippet 'puppet_setup'
+     end %>
++    puppet agent --test
++    puppet agent --test
+ <% end -%>
+
+ <% if salt_enabled %>

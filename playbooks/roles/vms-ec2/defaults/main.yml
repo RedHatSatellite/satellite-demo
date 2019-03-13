@@ -11,7 +11,7 @@ ec2_demo_tag: satellite1
 # you can override this and put your current ip or network, but the playbook
 # will automatically put your external IP here
 ec2_mynetworks: [ ] 
-ec2_instance_type: t2.small
+ec2_instance_type: t3.small
 ec2_keypair: ansible-dev
 ec2_security_group_name: "satellite_{{ ec2_demo_tag }}"
 

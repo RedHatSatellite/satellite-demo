@@ -1,0 +1,18 @@
+[Unit]
+Description=gitserver service
+After=docker.service
+Requires=docker.service
+PartOf=docker.service
+
+[Service]
+Environment=NAME=gitserver
+Environment=CONTAINER_IMAGE=localhost/gitserver:latest
+ExecStartPre=-/usr/bin/docker rm -f ${NAME}
+ExecStart=/usr/bin/docker run --name=${NAME} --rm -p 8888:8888 -v /home/gituser:/git:z --workdir=/tmp ${CONTAINER_IMAGE}
+ExecStop=/usr/bin/docker stop ${NAME}
+SyslogIdentifier=${NAME}
+Restart=always
+RestartSec=5s
+
+[Install]
+WantedBy=docker.service

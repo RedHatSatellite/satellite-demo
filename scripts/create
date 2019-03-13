@@ -1,0 +1,9 @@
+#!/bin/sh
+
+HOST=$1
+
+[ x$HOST == x ] && read -p "Enter Host to create (CTRL-C to abort): " HOST
+
+set -x
+ssh satellite sudo -i hammer host create --organization-id 1 --name $HOST --hostgroup RHEL7-Server --openscap-proxy-id 1 --puppet-ca-proxy-id 1 --location-id=1 --compute-resource AWS-us-east-1 --compute-profile AWS-us-east-1 --puppet-proxy-id 1 --lifecycle-environment Production
+ssh satellite sudo -i hammer host-collection add-host --organization-id=1 --name Clients --hosts $HOST

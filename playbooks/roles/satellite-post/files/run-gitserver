@@ -1,0 +1,44 @@
+#!/bin/sh
+
+GITDIR=/git
+REPO=templates.git
+
+makegit() {
+	set -e -E
+	cd $GITDIR
+	git init --bare --shared $REPO
+	cd $REPO
+	git config --local --add http.receivepack true
+	T=$(mktemp -d)
+	trap "rm -rf $T" EXIT
+	cd $T
+	git clone file://$GITDIR/$REPO t
+	cd t
+	echo '*~' > .gitignore
+	git add .gitignore
+	git config user.email root@example.com
+	git config user.name root
+	git commit -m "initial commit"
+	git push
+	cd $GITDIR
+	rm -rf $T
+	trap - EXIT
+	set +e +E
+}
+
+err() {
+	echo "ERROR:" "$@" >&2
+	exit 1
+}
+
+[ -d $GITDIR ] || err "$GITDIR doesn't exist!"
+
+cd $GITDIR || err "Unable to access $GITDIR"
+
+[ -d $GITDIR/$REPO ] || makegit
+
+cd $REPO || err "Unable to access $GITDIR/$REPO"
+
+git config --local -l || err "$GITDIR/$REPO already exists, but is not a git repo!"
+
+exec "$@"

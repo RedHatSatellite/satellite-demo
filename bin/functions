@@ -1,0 +1,1 @@
+api() { EP="$1" ; shift 1 ; curl -kv -u admin:redhat123 -H accept:application/json,version=2 -H content-type:application/json,version=2 https://satellite.example.com"$EP" "$@" ; }

@@ -17,3 +17,10 @@
   include_tasks: configure_demo_CVs.yml
   tags: [ post, post_demo_cvs ]
 
+- name: import puppet classes
+  include_tasks: import_puppet_classes.yml
+  tags: [ post, post_puppet ]
+
+- name: modify provisioning template
+  include_tasks: modify_template.yml
+  tags: [ post, post_template ]

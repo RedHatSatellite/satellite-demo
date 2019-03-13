@@ -21,10 +21,9 @@
     call_var: "call_out"
 
 - name: set global sshkey parameter if needed
-  command: "hammer global-parameter set --name=sshkey value='{{ satellite_sshkey.stdout }}'"
+  command: "hammer global-parameter set --name sshkey --value '{{ satellite_sshkey.stdout }}'"
   when:
-    - call_out.json.results | length > 0
-    - call_out.json.results.0.value != satellite_sshkey.stdout
+    - call_out.json.results | length < 1 or call_out.json.results.0.value != satellite_sshkey.stdout
 
 - include_tasks: configure_compute_resources_ec2.yml
   when:

@@ -1,0 +1,238 @@
+---
+# vim: sw=2 ts=2 ai expandtab
+
+- name: copy files for docker build
+  delegate_to: "{{ groups.dns.0 }}"
+  copy:
+    src: "{{ item }}"
+    dest: /tmp/docker/git/
+    mode: "{{ 0755 if item == 'run-gitserver' else 0644 }}"
+  with_items:
+    - Dockerfile
+    - git.conf
+    - run-gitserver
+
+- name: check that gituser exists
+  delegate_to: "{{ groups.dns.0 }}"
+  user:
+    name: gituser
+    comment: Git User
+    shell: /usr/sbin/nologin
+
+- name: get gituser UID and GID
+  delegate_to: "{{ groups.dns.0 }}"
+  getent:
+    database: passwd
+    key: gituser
+
+- name: check that the git image exists
+  delegate_to: "{{ groups.dns.0 }}"
+  docker_image:
+    name: localhost/gitserver:latest
+    path: /tmp/docker/git
+    buildargs:
+      HTTP_USER: "{{ satellite_user }}"
+      HTTP_PASS: "{{ satellite_pass }}"
+      HTTP_UID: "{{ getent_passwd.gituser.1 }}"
+      HTTP_GID: "{{ getent_passwd.gituser.2 }}"
+  register: gitserver_docker
+
+- name: copy gitserver service file
+  delegate_to: "{{ groups.dns.0 }}"
+  copy:
+    src: gitserver.service
+    dest: /etc/systemd/system
+  register: gitserver_service
+
+- name: ensure gitserver starts
+  delegate_to: "{{ groups.dns.0 }}"
+  systemd:
+    state: "{{ systemd_state }}"
+    daemon_reload: "{{ gitserver_docker is changed or gitserver_service is changed }}"
+    name: gitserver
+    enabled: true
+  vars:
+    systemd_state: "{{ (gitserver_docker is changed or gitserver_service is changed ) | ternary('restarted', 'started') }}"
+
+- name: clone templates
+  git:
+    repo: "http://{{ satellite_user }}:{{ satellite_pass }}@{{ groups.dns.0 }}:8888/git/templates.git"
+    dest: /root/templates
+
+- include_role:
+    name: satellite-shared
+    tasks_from: callsatellite.yml
+  vars:
+    call_name: get list of puppet classes
+    call_api: "/api/provisioning_templates?search=name={{ satellite_template_kickstart_userdata | urlencode }}"
+    call_var: "call_out"
+
+- set_fact:
+    satellite_template_id: "{{ call_out.json.results.0.id }}"
+
+- include_role:
+    name: satellite-shared
+    tasks_from: callsatellite.yml
+  vars:
+    call_name: read in template data
+    call_api: "/api/provisioning_templates/{{ satellite_template_id }}"
+    call_var: "call_out"
+
+- name: copy original template to /tmp
+  copy:
+    dest: "/tmp/{{ satellite_template_erb }}"
+    content: "{{ call_out.json.template }}"
+    force: false
+
+- name: patch original template
+  patch:
+    src: satellite_userdata_template.patch
+    dest: "/tmp/{{ satellite_template_erb }}"
+
+- name: ensure template directory exists
+  file:
+    path: "/root/templates/provisioning_templates/user_data/"
+    state: directory
+
+- name: copy template into repo
+  copy:
+    src: "/tmp/{{ satellite_template_erb }}"
+    dest: "/root/templates/provisioning_templates/user_data/"
+    remote_src: true
+  register: call_out
+
+- name: commit changes to gitserver
+  shell: |
+    set -e -E
+    git add .
+    git commit -m 'updated user data from ansible'
+    git push
+  args:
+    chdir: /root/templates
+  when: call_out is changed
+
+- name: check settings
+  changed_when: false
+  command: "hammer --output json settings list --search=name={{ item.key }}"
+  with_dict:
+    template_sync_associate: new
+    template_sync_repo: "http://{{ groups.dns.0 }}:8080/git/templates.git"
+  register: call_out
+  loop_control:
+    label: "{{ item.key }}"
+
+- name: set settings
+  command: "hammer settings set --name {{ item.item.key }} --value {{ item.item.value }}"
+  with_items: "{{ call_out.results }}"
+  when: "(item.stdout | from_json | map(attribute='Value') | first) != item.item.value"
+  loop_control:
+    label: "{{ item.item.key }} = {{ item.item.value }}"
+
+- name: import custom provisioning template
+  connection: local
+  uri:
+    url: "{{ satellite_url }}/api/templates/import"
+    user: "{{ satellite_user }}"
+    password: "{{ satellite_pass }}"
+    force_basic_auth: yes
+    validate_certs: false
+    method: POST
+    headers:
+      Accept: "application/json,version=2"
+      Content-Type: "application/json,version=2"
+
+- name: grab template ID for imported template
+  connection: local
+  register: call_out
+  uri:
+    url: "{{ satellite_url }}/api/provisioning_templates?search=name={{ template_name | urlencode }}"
+    user: "{{ satellite_user }}"
+    password: "{{ satellite_pass }}"
+    force_basic_auth: yes
+    validate_certs: false
+    method: GET
+    headers:
+      Accept: "application/json,version=2"
+      Content-Type: "application/json,version=2"
+  vars:
+    template_name: '"Community Satellite Kickstart default user data"'
+
+- set_fact:
+    template_id: "{{ call_out.json.results.0.id }}"
+
+- name: grab template details
+  connection: local
+  register: template_details
+  uri:
+    url: "{{ satellite_url }}/api/provisioning_templates/{{ template_id }}"
+    user: "{{ satellite_user }}"
+    password: "{{ satellite_pass }}"
+    force_basic_auth: yes
+    validate_certs: false
+    method: GET
+    headers:
+      Accept: "application/json,version=2"
+      Content-Type: "application/json,version=2"
+
+- name: get RHEL7-Server hostgroup details for OS_ID
+  connection: local
+  register: call_out
+  uri:
+    url: "{{ satellite_url }}/api/hostgroups?search=name=RHEL7-Server"
+    user: "{{ satellite_user }}"
+    password: "{{ satellite_pass }}"
+    force_basic_auth: yes
+    validate_certs: false
+    method: GET
+    headers:
+      Accept: "application/json,version=2"
+      Content-Type: "application/json,version=2"
+
+# - debug:
+#      var: template_details.json
+# - fail:
+
+- set_fact:
+    os_id: "{{ call_out.json.results | map(attribute='operatingsystem_id') | first }}"
+    template_details:
+      id: "{{ template_details.json.id }}"
+      orgs: "{{ template_details.json.organizations | map(attribute='id') | list | sort }}"
+      locs: "{{ template_details.json.locations | map(attribute='id') | list | sort }}"
+      oss: "{{ template_details.json.operatingsystems | map(attribute='id') | list | sort }}"
+
+- debug:
+    var: template_details
+
+- set_fact:
+    provisioning_template_body:
+      provisioning_template:
+        organization_ids: "{{ (template_details.orgs + [ org_id ]) | map('int') | unique | flatten }}"
+        operatingsystem_ids: "{{ (template_details.oss + [ os_id ]) | map('int') | unique | flatten }}"
+    
+- debug:
+    var: tmp
+  vars: 
+    tmp: 
+      body: "{{ provisioning_template_body }}"
+      org_id: "{{ org_id }}"
+      os_id: "{{ os_id }}"
+
+- name: set organization and operating systems
+  connection: local
+  register: call_out
+  uri:
+    url: "{{ satellite_url }}/api/provisioning_templates/{{ template_details.id }}"
+    user: "{{ satellite_user }}"
+    password: "{{ satellite_pass }}"
+    force_basic_auth: yes
+    validate_certs: false
+    method: PUT
+    body: "{{ provisioning_template_body }}"
+    body_format: json
+    headers:
+      Accept: "application/json,version=2"
+      Content-Type: "application/json,version=2"
+  when: |
+    (org_id | int) not in template_details.orgs or
+    (os_id | int) not in template_details.oss
+  changed_when: true
